@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Boucles de vélo de route adaptées à la séance, au vent et loin des grands axes.">
+  <meta name="theme-color" content="#0b1016">
+  <meta name="color-scheme" content="dark light">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Parcours">
+  <title>Parcours vélo</title>
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <script>
+    try { var t = localStorage.getItem('pv_theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="vendor/leaflet/leaflet.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#panel">Aller aux réglages</a>
+  <div class="layout">
+    <aside class="panel" id="panel" tabindex="-1">
+      <header class="brand">
+        <img class="brand__logo" src="icons/icon.svg" alt="" width="36" height="36">
+        <div class="brand__text"><h1 class="brand__title">Parcours vélo</h1><p class="brand__sub">Boucles route selon la séance et le vent</p></div>
+        <button type="button" class="icon-btn" id="themeToggle" aria-label="Changer de thème"></button>
+      </header>
+
+      <div class="segmented" role="tablist" aria-label="Sections">
+        <button type="button" role="tab" id="tab-ride" aria-controls="pane-ride" aria-selected="true" data-tab="ride">Sortie</button>
+        <button type="button" role="tab" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved">Favoris <span class="count" id="savedCount"></span></button>
+        <button type="button" role="tab" id="tab-profile" aria-controls="pane-profile" aria-selected="false" data-tab="profile">Profil</button>
+      </div>
+
+      <!-- ============ SORTIE ============ -->
+      <section class="pane" id="pane-ride" role="tabpanel" aria-labelledby="tab-ride">
+        <form class="form" id="rideForm" novalidate>
+          <fieldset class="field">
+            <legend class="label">Type de séance</legend>
+            <div class="chips" id="sessionChips" role="radiogroup" aria-label="Type de séance"></div>
+            <p class="hint" id="sessionHint"></p>
+          </fieldset>
+          <div class="grid2">
+            <div class="field"><label class="label" for="f-km">Distance · km</label><input class="input" id="f-km" name="km" inputmode="numeric" autocomplete="off"></div>
+            <div class="field"><label class="label" for="f-ascent">Dénivelé · m <span class="opt">(auto)</span></label><input class="input" id="f-ascent" name="ascent" inputmode="numeric" autocomplete="off" placeholder="Auto"></div>
+            <div class="field"><label class="label" for="f-date">Jour</label><input class="input" id="f-date" type="date" name="date"></div>
+            <div class="field"><label class="label" for="f-time">Heure de départ</label><input class="input" id="f-time" type="time" name="time" step="900"></div>
+          </div>
+          <div class="field"><label class="label" for="f-quiet">Routes</label><select class="input" id="f-quiet" name="quiet"></select></div>
+          <div class="field">
+            <label class="label" for="f-place">Départ</label>
+            <div class="place-row">
+              <input class="input" id="f-place" name="place" autocomplete="off" placeholder="Ville ou adresse" enterkeyhint="search">
+              <button type="button" class="btn btn--soft btn--square" id="placeSearch" aria-label="Rechercher le lieu" data-icon="search"></button>
+              <button type="button" class="btn btn--soft btn--square" id="locateMe" aria-label="Utiliser ma position" data-icon="locate"></button>
+            </div>
+            <p class="hint" id="startLabel"></p>
+          </div>
+          <p class="note" id="riderNote"></p>
+          <button type="submit" class="btn btn--primary btn--lg" id="submitBtn"><span data-icon="route"></span><span>Trouver mes boucles</span></button>
+          <div class="progress" id="progress" hidden aria-live="polite"><div class="progress__track"><div class="progress__bar"></div></div><span class="progress__label"></span></div>
+        </form>
+
+        <div id="forecast" class="forecast" hidden></div>
+
+        <div id="results" hidden>
+          <h2 class="h2">Boucles proposées</h2>
+          <div class="options" id="options" role="listbox" aria-label="Boucles proposées"></div>
+          <article class="detail" id="detail" aria-live="polite"></article>
+        </div>
+      </section>
+
+      <!-- ============ FAVORIS ============ -->
+      <section class="pane" id="pane-saved" role="tabpanel" aria-labelledby="tab-saved" hidden>
+        <p class="hint">Vos parcours enregistrés restent sur cet appareil. Rouvrez-en un pour recalculer le vent au jour et à l’heure choisis dans « Sortie ».</p>
+        <div id="savedList" class="saved-list"></div>
+      </section>
+
+      <!-- ============ PROFIL ============ -->
+      <section class="pane" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
+        <form class="form" id="profileForm" novalidate>
+          <div class="grid2">
+            <div class="field"><label class="label" for="p-ftp">FTP · W</label><input class="input" id="p-ftp" name="ftp" inputmode="numeric" autocomplete="off"></div>
+            <div class="field"><label class="label" for="p-weight">Poids · kg</label><input class="input" id="p-weight" name="weight" inputmode="decimal" autocomplete="off"></div>
+            <div class="field"><label class="label" for="p-bike">Vélo + équipement · kg</label><input class="input" id="p-bike" name="bike" inputmode="decimal" autocomplete="off"></div>
+            <div class="field"><label class="label" for="p-position">Position</label>
+              <select class="input" id="p-position" name="cda">
+                <option value="0.40">Mains en haut du cintre</option>
+                <option value="0.36">Mains aux cocottes</option>
+                <option value="0.32">Mains en bas du cintre</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint">Ces valeurs servent à estimer la vitesse, la durée et l’effet du vent. L’intensité de chaque séance est un pourcentage de votre FTP.</p>
+          <button type="submit" class="btn btn--primary">Enregistrer le profil</button>
+        </form>
+        <div class="about">
+          <h2 class="h2">Comment ça marche</h2>
+          <ol class="steps">
+            <li>Huit boucles sont tracées autour du départ, une par direction, la première face au vent.</li>
+            <li><a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a> les fait passer par de vraies routes OpenStreetMap, en évitant les axes à fort trafic estimé.</li>
+            <li>Chaque boucle est simulée mètre par mètre avec votre puissance, la pente et le vent prévu à l’heure du passage (<a href="https://open-meteo.com" target="_blank" rel="noopener">Open-Meteo</a>).</li>
+            <li>Le classement combine distance, dénivelé, temps perdu au vent, vent de face à l’aller plutôt qu’au retour, grands axes, chemins et routes empruntées deux fois.</li>
+          </ol>
+          <p class="hint">La heatmap Strava n’a pas d’accès public : un lien l’ouvre centrée sur votre boucle pour vérifier que les routes sont fréquentées par les cyclistes.</p>
+        </div>
+      </section>
+
+      <footer class="credits">Itinéraires BRouter · cartes © OpenStreetMap, CyclOSM · météo Open-Meteo · recherche Nominatim</footer>
+    </aside>
+
+    <main class="map-wrap">
+      <div class="map" id="map" aria-label="Carte"></div>
+      <div class="map-legend" aria-hidden="true"><span style="--c:var(--tail)">Vent dans le dos</span><span style="--c:var(--cross)">De côté</span><span style="--c:var(--head)">De face</span></div>
+    </main>
+  </div>
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+</body>
+</html>
