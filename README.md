@@ -27,7 +27,7 @@ Tout est gratuit et sans clé d'API : BRouter, Open-Meteo, Photon (recherche de 
 
 ## Carnet de cols
 
-L'onglet **Cols** rassemble environ 150 montées routières : Alpes du Nord, Alpes du Sud et Provence, Alpes suisses, Alpes italiennes, Jura, Vosges et Pyrénées (`js/data/cols.js`).
+L'onglet **Cols** rassemble environ 160 montées routières : Alpes du Nord, Alpes du Sud et Provence, Alpes suisses, Alpes italiennes, Jura, Vosges et Pyrénées (`js/data/cols.js`).
 
 - Pour chaque col et versant : altitude, longueur, pente moyenne et maximale, dénivelé, catégorie estimée (HC, 1re à 4e, d'après l'indice de difficulté FIETS).
 - **Top 10** des cols à faire, avec la raison du choix.

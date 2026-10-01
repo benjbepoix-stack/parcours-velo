@@ -1,4 +1,4 @@
-/* Cols routiers : Alpes (France, Suisse, Italie), Jura, Vosges, Pyrénées (environ 150 montées).
+/* Cols routiers : Alpes (France, Suisse, Italie), Jura, Vosges, Pyrénées (environ 160 montées).
    Chiffres indicatifs pour le versant indiqué (départ « from ») : longueur (km),
    pente moyenne et maximale (%), altitude du sommet (m). Le dénivelé est déduit
    de la longueur et de la pente moyenne. Coordonnées du sommet approximatives. */
@@ -56,6 +56,10 @@ const RAW = [
   ['machine', 'Col de la Machine (Combe Laval)', 'alpes-nord', 'Drôme · Vercors', 1011, 'Saint-Jean-en-Royans', 12.5, 6.1, 8.0, 45.0400, 5.3330, 'Route en balcon taillée dans la falaise'],
   ['menee', 'Col de Menée', 'alpes-nord', 'Drôme · Vercors', 1402, 'Châtillon-en-Diois', 17.0, 4.9, 8.0, 44.8150, 5.5130],
   ['rousset', 'Col du Rousset', 'alpes-nord', 'Drôme · Vercors', 1254, 'Die', 20.9, 4.0, 7.0, 44.8590, 5.4040],
+  ['morgins-monthey', 'Pas de Morgins', 'alpes-nord', 'Haute-Savoie · Vallée d’Abondance', 1369, 'Monthey', 15.0, 6.3, 9.0, 46.2370, 6.8420, 'Versant suisse, le plus pentu'],
+  ['morgins-abondance', 'Pas de Morgins (Abondance)', 'alpes-nord', 'Haute-Savoie · Vallée d’Abondance', 1369, 'Abondance', 13.6, 3.2, 7.0, 46.2370, 6.8420, 'Par Châtel, toute la vallée d’Abondance'],
+  ['bassachaux', 'Col de Bassachaux', 'alpes-nord', 'Haute-Savoie · Vallée d’Abondance', 1778, 'Châtel', 7.5, 7.7, 12.0, 46.2300, 6.7950, 'Route étroite, fin en alpage'],
+  ['corbier', 'Col du Corbier', 'alpes-nord', 'Haute-Savoie · Chablais', 1237, 'Le Biot', 6.4, 6.6, 9.0, 46.2290, 6.6400],
 
   // ---------- Alpes du Sud & Provence ----------
   ['ventoux-bedoin', 'Mont Ventoux (Bédoin)', 'alpes-sud', 'Vaucluse', 1909, 'Bédoin', 21.5, 7.5, 12.0, 44.1740, 5.2785, 'Le versant mythique, par la forêt puis le désert lunaire'],
@@ -113,6 +117,9 @@ const RAW = [
   ['sanetsch', 'Col du Sanetsch', 'suisse', 'Valais', 2252, 'Sion (Pont-de-la-Morge)', 29.0, 6.0, 13.0, 46.3330, 7.2870, 'Long et sauvage, jusqu’au lac du barrage'],
   ['champex', 'Champex-Lac', 'suisse', 'Valais', 1498, 'Orsières', 9.0, 6.6, 9.0, 46.0300, 7.1150],
   ['crans-montana', 'Crans-Montana', 'suisse', 'Valais', 1500, 'Sierre', 15.0, 6.4, 9.0, 46.3100, 7.4810],
+  ['jaman', 'Col de Jaman', 'suisse', 'Vaud · Riviera', 1512, 'Montreux', 14.5, 7.6, 12.0, 46.4540, 6.9820, 'Vue sur le Léman, pentes soutenues après Les Avants'],
+  ['villars', 'Villars-sur-Ollon', 'suisse', 'Vaud · Chablais vaudois', 1253, 'Ollon', 11.0, 7.1, 10.0, 46.2990, 7.0550],
+  ['leysin', 'Leysin', 'suisse', 'Vaud · Chablais vaudois', 1260, 'Aigle', 11.0, 7.8, 10.0, 46.3430, 7.0120, 'Lacets au-dessus de la vallée du Rhône'],
 
   // ---------- Alpes italiennes ----------
   ['stelvio', 'Passo dello Stelvio', 'italie', 'Haut-Adige', 2757, 'Prato allo Stelvio', 24.3, 7.4, 12.0, 46.5285, 10.4530, '48 lacets numérotés'],
@@ -154,6 +161,11 @@ const RAW = [
   ['mollendruz', 'Col du Mollendruz', 'jura', 'Vaud', 1180, 'L’Isle', 8.0, 6.4, 9.0, 46.6480, 6.3690],
   ['croix-serra', 'Col de la Croix de la Serra', 'jura', 'Jura · Haut-Jura', 1049, 'Saint-Claude', 14.0, 4.4, 8.0, 46.3300, 5.9000],
   ['mont-crosin', 'Mont Crosin', 'jura', 'Berne', 1227, 'Saint-Imier', 6.0, 7.1, 10.0, 47.1800, 7.0200],
+  ['sainte-croix', 'Sainte-Croix (Les Rasses)', 'jura', 'Vaud · Nord vaudois', 1066, 'Vuiteboeuf', 8.5, 6.0, 9.0, 46.8220, 6.5030],
+  ['mont-dor', 'Mont d’Or', 'jura', 'Doubs · Haut-Doubs', 1400, 'Les Longevilles-Mont-d’Or', 8.0, 6.0, 10.0, 46.7220, 6.3550, 'Vue sur les Alpes et le lac de Joux'],
+  ['chapelle-des-buis', 'Chapelle-des-Buis', 'jura', 'Doubs · Besançon', 470, 'Besançon (Rivotte)', 3.6, 6.1, 12.0, 47.2260, 6.0520, 'Montée urbaine courte, chiffres à confirmer'],
+  ['septmoncel', 'Lacets de Septmoncel', 'jura', 'Jura · Haut-Jura', 980, 'Saint-Claude', 10.5, 5.2, 9.0, 46.3670, 5.9100, 'Route en lacets au-dessus des gorges du Flumen'],
+  ['mont-poupet', 'Mont Poupet', 'jura', 'Jura · Salins-les-Bains', 803, 'Salins-les-Bains', 6.0, 7.7, 11.0, 46.9400, 5.8800],
 
   // ---------- Vosges ----------
   ['planche-belles-filles', 'La Planche des Belles Filles', 'vosges', 'Haute-Saône', 1148, 'Plancher-les-Mines', 5.9, 8.5, 20.0, 47.7720, 6.7810, 'Arrivée du Tour, final très raide'],
