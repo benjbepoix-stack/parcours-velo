@@ -58,7 +58,7 @@ function applyTheme(theme) {
   const dark = theme ? theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
   $('#themeToggle').innerHTML = icon(dark ? 'sun' : 'moon', 20);
   $('#themeToggle').setAttribute('aria-label', dark ? 'Passer en thème clair' : 'Passer en thème sombre');
-  if (result) mapUi.drawRoutes(result.routes, selected, { fit: false });
+  mapUi.setMapTheme(dark);
 }
 
 /* ---------- Onglets ---------- */
@@ -202,7 +202,7 @@ function renderAll({ fit = true } = {}) {
   }
   renderOptions();
   renderDetail();
-  mapUi.drawRoutes(result.routes, selected, { fit });
+  mapUi.drawRoute(result.routes[selected], { fit });
 }
 
 function renderForecast() {
@@ -261,6 +261,7 @@ function warningsFor(r) {
   if (result.source === 'plan' && Math.abs(r.meters / 1000 - t.km) / t.km > 0.12) out.push(`Distance éloignée de l’objectif (${t.km} km) : le réseau routier autour du départ limite les possibilités.`);
   if (result.source === 'plan' && t.ascent !== null && Math.abs(r.ascent - t.ascent) > Math.max(250, t.ascent * 0.35))
     out.push(r.ascent < t.ascent ? `Moins de dénivelé que prévu (${t.ascent} m visés) : essayez un départ plus proche du relief.` : `Plus de dénivelé que prévu (${t.ascent} m visés) : réduisez la distance ou choisissez une autre boucle.`);
+  if (r.roadProfile === false) out.push('Profil vélo de route indisponible sur le serveur : itinéraire calculé avec un profil BRouter standard, vérifiez les portions non asphaltées.');
   if (mix.major > 0.08) out.push(`${pct(mix.major)} sur routes principales : prudence, ou choisissez « Très peu de trafic ».`);
   if (mix.unpaved > 0.03) out.push(`${pct(mix.unpaved)} de revêtement non asphalté selon OpenStreetMap.`);
   if (r.overlap > 0.15) out.push(`${pct(r.overlap)} de la boucle repasse par les mêmes routes.`);
@@ -565,18 +566,8 @@ function init() {
   fillProfile();
   renderSavedCount();
 
-  const mapReady = () =>
-    mapUi.initMap($('#map'), {
-      start: prefs.start,
-      onStart: latlng => setStart(latlng),
-      onPickRoute: i => {
-        selected = i;
-        renderOptions();
-        renderDetail();
-        renderForecast();
-        mapUi.drawRoutes(result.routes, selected, { fit: false });
-      }
-    });
+  const isDark = () => (document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
+  const mapReady = () => mapUi.initMap($('#map'), { start: prefs.start, dark: isDark(), onStart: latlng => setStart(latlng) });
   if (window.L) mapReady();
   else window.addEventListener('load', mapReady, { once: true });
 
@@ -639,7 +630,7 @@ function init() {
     renderOptions();
     renderDetail();
     renderForecast();
-    mapUi.drawRoutes(result.routes, selected);
+    mapUi.drawRoute(result.routes[selected]);
   });
   $('#detail').addEventListener('click', e => {
     const action = e.target.closest('[data-action]')?.dataset.action;

@@ -59,9 +59,9 @@ export const SESSIONS = {
 
 /** Profils BRouter : du plus direct au plus tranquille. */
 export const QUIET_LEVELS = {
-  normal: { label: 'Standard', profile: 'fastbike' },
-  quiet: { label: 'Peu de trafic', profile: 'fastbike-lowtraffic' },
-  veryQuiet: { label: 'Très peu de trafic', profile: 'fastbike-verylowtraffic' }
+  normal: { label: 'Standard', traffic: 0, fallback: 'fastbike' },
+  quiet: { label: 'Peu de trafic', traffic: 1, fallback: 'fastbike-lowtraffic' },
+  veryQuiet: { label: 'Très peu de trafic', traffic: 2.5, fallback: 'fastbike-verylowtraffic' }
 };
 
 /* ---------- Génération de boucles ---------- */
@@ -207,6 +207,137 @@ export function simulate(coords, { power, mass, startTime, wind, cda = CDA }) {
   return { segs, seconds: total, secondsNoWind: totalNoWind, meters: dist };
 }
 
+/* ---------- Nettoyage du tracé ---------- */
+
+/** Distances cumulées (m). */
+export function cumulative(coords) {
+  const cum = new Float64Array(coords.length);
+  for (let i = 1; i < coords.length; i++) cum[i] = cum[i - 1] + haversine(coords[i - 1], coords[i]);
+  return cum;
+}
+
+/** Point situé à la distance cumulée `d` (interpolation). */
+function pointAt(coords, cum, d) {
+  let lo = 0;
+  let hi = cum.length - 1;
+  while (hi - lo > 1) {
+    const mid = (lo + hi) >> 1;
+    if (cum[mid] <= d) lo = mid;
+    else hi = mid;
+  }
+  const span = cum[hi] - cum[lo] || 1;
+  const k = Math.min(1, Math.max(0, (d - cum[lo]) / span));
+  return [coords[lo][0] + (coords[hi][0] - coords[lo][0]) * k, coords[lo][1] + (coords[hi][1] - coords[lo][1]) * k];
+}
+
+/**
+ * Cherche le plus grand détour « en cul-de-sac » : le tracé quitte un point puis y revient.
+ *  - aller-retour sur la même route (impasse, chemin vers un point de passage) ;
+ *  - petite boucle « sucette » de plus de 1,5 km qui revient au même carrefour.
+ * Les lacets de montagne (points proches mais tracé qui continue) ne sont pas concernés.
+ */
+function findSpur(coords, cum, maxSpur) {
+  const CELL_LAT = 0.0003;
+  const CELL_LON = 0.00045;
+  const RADIUS = 25;
+  const grid = new Map();
+  const key = (a, b) => `${a}:${b}`;
+  let best = null;
+  for (let j = 0; j < coords.length; j++) {
+    const cy = Math.floor(coords[j][0] / CELL_LAT);
+    const cx = Math.floor(coords[j][1] / CELL_LON);
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const list = grid.get(key(cy + dy, cx + dx));
+        if (!list) continue;
+        for (const i of list) {
+          const len = cum[j] - cum[i];
+          if (len < 60 || len > maxSpur) continue;
+          if (best && len <= best.len) continue;
+          if (haversine(coords[i], coords[j]) > RADIUS) continue;
+          // Aller-retour : les points symétriques du détour se superposent.
+          const retrace = [0.15, 0.3, 0.45].every(f => haversine(pointAt(coords, cum, cum[i] + f * len), pointAt(coords, cum, cum[j] - f * len)) < 40);
+          if (retrace || len >= 1500) best = { i, j, len };
+        }
+      }
+    }
+    const k = key(cy, cx);
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k).push(j);
+  }
+  return best;
+}
+
+/**
+ * Supprime les allers-retours et petites boucles parasites du tracé.
+ * @returns {{coords:Array, removed:number, spurs:number, removedPoints:Set<string>}}
+ */
+export function removeSpurs(coords, { maxSpur = 8000, maxShare = 0.22 } = {}) {
+  let out = coords;
+  let removed = 0;
+  let spurs = 0;
+  const removedPoints = new Set();
+  for (let pass = 0; pass < 12; pass++) {
+    const cum = cumulative(out);
+    const total = cum[cum.length - 1];
+    const spur = findSpur(out, cum, Math.min(maxSpur, total * maxShare));
+    if (!spur) break;
+    for (let k = spur.i + 1; k <= spur.j; k++) removedPoints.add(pointKey(out[k]));
+    out = [...out.slice(0, spur.i + 1), ...out.slice(spur.j + 1)];
+    removed += spur.len;
+    spurs++;
+  }
+  return { coords: out, removed, spurs, removedPoints };
+}
+
+export const pointKey = ([lat, lon]) => `${lat.toFixed(5)},${lon.toFixed(5)}`;
+
+/** Retire des messages BRouter les tronçons supprimés (pour l'analyse des routes). */
+export function filterMessages(messages, removedPoints) {
+  if (!removedPoints.size || !Array.isArray(messages) || messages.length < 2) return messages;
+  const head = messages[0];
+  const iLon = head.indexOf('Longitude');
+  const iLat = head.indexOf('Latitude');
+  if (iLon < 0 || iLat < 0) return messages;
+  return [head, ...messages.slice(1).filter(row => !removedPoints.has(pointKey([Number(row[iLat]) / 1e6, Number(row[iLon]) / 1e6])))];
+}
+
+/** Dénivelé positif avec hystérésis (gomme le bruit du modèle d'altitude). */
+export function ascentOf(coords, threshold = 8) {
+  let up = 0;
+  let ref = null;
+  for (const c of coords) {
+    const e = c[2];
+    if (!Number.isFinite(e)) continue;
+    if (ref === null) ref = e;
+    else if (e > ref + threshold) {
+      up += e - ref;
+      ref = e;
+    } else if (e < ref - threshold) ref = e;
+  }
+  return up;
+}
+
+/**
+ * Nettoie un itinéraire BRouter : supprime les allers-retours et recalcule distance,
+ * dénivelé et messages en conséquence.
+ */
+export function cleanRoute(res) {
+  const { coords, removed, spurs, removedPoints } = removeSpurs(res.coords);
+  if (!spurs) return { ...res, spurs: 0 };
+  const cum = cumulative(coords);
+  const ratio = res.ascent && res.coords.length ? res.ascent / Math.max(1, ascentOf(res.coords)) : 1;
+  return {
+    ...res,
+    coords,
+    meters: cum[cum.length - 1],
+    ascent: Math.round(ascentOf(coords) * Math.min(1.3, Math.max(0.7, ratio))),
+    messages: filterMessages(res.messages, removedPoints),
+    spurs,
+    removedMeters: removed
+  };
+}
+
 /* ---------- Analyse du tracé ---------- */
 
 /** Part du parcours passant plusieurs fois sur la même route (hors 1er / dernier km). */
@@ -296,7 +427,7 @@ export function scoreRoute(r, target) {
     tactic,
     overlap: r.overlap * 2,
     traffic,
-    unpaved: r.mix.unpaved * 4
+    unpaved: r.mix.unpaved * 12
   };
   return { total: Object.values(parts).reduce((s, v) => s + v, 0), parts, half, windCost };
 }

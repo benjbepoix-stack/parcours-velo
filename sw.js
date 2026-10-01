@@ -1,15 +1,15 @@
 /* Service worker : l'interface fonctionne hors ligne (favoris, GPX) ; itinéraires, météo et
    fonds de carte restent en ligne (tuiles déjà vues servies depuis le cache si possible). */
-const VERSION = 'pv-v1';
+const VERSION = 'pv-v2';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/images/layers.png', 'vendor/leaflet/images/layers-2x.png',
   'js/app.js', 'js/core/ride.js', 'js/core/planner.js', 'js/core/dates.js',
-  'js/services/routing.js', 'js/services/wind.js', 'js/services/geocode.js', 'js/services/store.js',
+  'js/services/routing.js', 'js/services/road-profile.js', 'js/services/wind.js', 'js/services/geocode.js', 'js/services/store.js',
   'js/ui/icons.js', 'js/ui/charts.js', 'js/ui/map.js', 'icons/icon.svg', 'icons/icon-192.png'
 ];
 const TILES = 'pv-tiles';
-const TILE_HOSTS = /tile-cyclosm|tile\.openstreetmap|opentopomap|waymarkedtrails/;
+const TILE_HOSTS = /basemaps\.cartocdn|tile-cyclosm|tile\.openstreetmap|opentopomap|waymarkedtrails/;
 const MAX_TILES = 600;
 
 self.addEventListener('install', e => {

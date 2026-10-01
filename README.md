@@ -7,8 +7,9 @@ Application web (installable sur iPhone et Android) qui propose des **boucles de
 - **Séances** : endurance, récupération, intervalles, côtes, sortie longue ou libre. Chaque séance fixe l'intensité (en % de ta FTP) et le dénivelé visé ; distance et dénivelé restent modifiables.
 - **Vent** : prévisions heure par heure (Open-Meteo) au point de départ. Huit boucles sont calculées dans toutes les directions, la première face au vent, puis simulées mètre par mètre avec ta puissance, ton poids, ta position, la pente et le vent prévu à l'heure du passage. Le classement privilégie **l'aller face au vent et le retour vent dans le dos**.
 - **Meilleur créneau** : pour la boucle choisie, la durée estimée selon l'heure de départ (6 h – 20 h), avec le risque de pluie. Un appui sur une barre change l'heure et recalcule tout, sans refaire les itinéraires.
-- **Routes tranquilles** : itinéraires [BRouter](https://brouter.de) sur OpenStreetMap, profils *Standard*, *Peu de trafic* ou *Très peu de trafic*. Chaque boucle affiche la part de petites routes, de départementales, de grands axes, de revêtement non asphalté et d'itinéraires cyclables balisés, avec des alertes (grands axes, chemins, rafales, pluie, routes empruntées deux fois).
-- **Carte** : fond CyclOSM (pensé pour le vélo), standard ou relief, calque des itinéraires cyclables balisés ; tracé coloré selon le vent (dos / côté / face) avec le sens de parcours. Les autres boucles restent visibles et se sélectionnent d'un appui.
+- **Routes tranquilles et roulables** : itinéraires [BRouter](https://brouter.de) sur OpenStreetMap avec un **profil vélo de route** dédié (`js/services/road-profile.js`, dérivé de *fastbike-verylowtraffic*) : pistes, sentiers et revêtements non asphaltés quasi interdits, trafic évité selon le niveau *Standard*, *Peu de trafic* ou *Très peu de trafic*. Le profil est envoyé au serveur BRouter ; s'il est indisponible, l'app se rabat sur les profils intégrés et le signale.
+- **Belles boucles** : les allers-retours parasites (impasse ou chemin menant à un point de passage, petite boucle qui revient au même carrefour) sont détectés et retirés du tracé ; distance, dénivelé et analyse des routes sont recalculés. Chaque boucle affiche la part de petites routes, de départementales, de grands axes, de revêtement non asphalté et d'itinéraires cyclables balisés, avec des alertes (grands axes, chemins, rafales, pluie, routes empruntées deux fois).
+- **Carte lisible** : fond épuré *Plan* (CARTO, clair ou sombre selon le thème), ou *Vélo (CyclOSM)* et *Relief* ; calque des itinéraires cyclables balisés. Tracé épais avec liseré, coloré selon le vent (dos / côté / face), chevrons de sens et bornes kilométriques.
 - **Profil altimétrique** avec la bande de vent rencontré.
 - **Export GPX** (Garmin, Wahoo, Komoot, Strava…) via la feuille de partage sur mobile.
 - **Favoris** : enregistre une boucle, rouvre-la plus tard avec le vent d'un autre jour, renomme, exporte, supprime.
@@ -16,7 +17,7 @@ Application web (installable sur iPhone et Android) qui propose des **boucles de
 - **Heatmap Strava** : lien vers la heatmap centrée sur la boucle pour vérifier que les cyclistes empruntent ces routes. (Strava ne propose pas d'accès public à ses tuiles : elles ne peuvent pas être intégrées au calcul.)
 - Thème clair / sombre, fonctionne hors ligne pour l'interface, les favoris et l'export (le calcul d'itinéraires et la météo demandent du réseau).
 
-Tout est gratuit et sans clé d'API : BRouter, Open-Meteo, Nominatim, tuiles OpenStreetMap / CyclOSM / OpenTopoMap / Waymarked Trails. Les données personnelles (profil, favoris) restent dans le navigateur.
+Tout est gratuit et sans clé d'API : BRouter, Open-Meteo, Nominatim, tuiles CARTO / OpenStreetMap / CyclOSM / OpenTopoMap / Waymarked Trails. Les données personnelles (profil, favoris) restent dans le navigateur.
 
 ## Publier avec GitHub Pages
 

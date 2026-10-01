@@ -112,3 +112,72 @@ test('toGPX produit un XML échappé avec altitude', () => {
   assert.match(gpx, /<ele>250.4<\/ele>/);
   assert.equal((gpx.match(/<trkpt /g) || []).length, 2);
 });
+
+/* ---------- Nettoyage des allers-retours ---------- */
+function squareLoop(sideM, step = 50) {
+  const pts = [];
+  let p = START;
+  for (const h of [0, 90, 180, 270]) {
+    for (let k = 0; k < sideM / step; k++) {
+      pts.push([...p, 300]);
+      p = R.destination(p, h, step);
+    }
+  }
+  pts.push([...START, 300]);
+  return pts;
+}
+
+test('removeSpurs supprime une impasse aller-retour au milieu de la boucle', () => {
+  const loop = squareLoop(5000);
+  const k = Math.floor(loop.length * 0.4); // milieu du 2e côté
+  const base = loop[k];
+  const spur = [];
+  for (let d = 50; d <= 1200; d += 50) spur.push([...R.destination(base, 0, d), 300]); // vers le nord (côté gauche)
+  const back = spur.slice(0, -1).reverse().map(([a, b]) => [a + 0.00002, b + 0.00002, 300]);
+  const withSpur = [...loop.slice(0, k + 1), ...spur, ...back, ...loop.slice(k)];
+  const before = R.cumulative(withSpur).at(-1);
+  const { coords, spurs, removed } = R.removeSpurs(withSpur);
+  assert.equal(spurs, 1);
+  assert.ok(Math.abs(removed - 2400) < 200, `retiré ${removed}`);
+  const after = R.cumulative(coords).at(-1);
+  assert.ok(Math.abs(after - 20000) < 300, `longueur ${after} (avant ${before})`);
+});
+
+test('removeSpurs supprime une petite boucle « sucette »', () => {
+  const loop = squareLoop(5000);
+  const k = Math.floor(loop.length * 0.6);
+  const base = loop[k];
+  const lolly = [];
+  let p = base;
+  for (const h of [200, 290, 20, 110]) for (let s = 0; s < 10; s++) { p = R.destination(p, h, 50); lolly.push([...p, 300]); }
+  lolly[lolly.length - 1] = [...base];
+  const { spurs } = R.removeSpurs([...loop.slice(0, k + 1), ...lolly, ...loop.slice(k + 1)]);
+  assert.equal(spurs, 1);
+});
+
+test('removeSpurs garde une boucle propre et des lacets', () => {
+  assert.equal(R.removeSpurs(squareLoop(5000)).spurs, 0);
+  // Lacets : allers-retours décalés de 60 m qui montent (le tracé continue).
+  const zig = [];
+  let p = START;
+  for (let leg = 0; leg < 8; leg++) {
+    for (let s = 0; s < 8; s++) { zig.push([...p, 300 + leg * 20]); p = R.destination(p, leg % 2 ? 270 : 90, 50); }
+    for (let s = 0; s < 2; s++) { zig.push([...p, 300 + leg * 20]); p = R.destination(p, 0, 30); }
+  }
+  assert.equal(R.removeSpurs(zig).spurs, 0);
+});
+
+test('cleanRoute recalcule distance et messages', () => {
+  const loop = squareLoop(3000);
+  const k = 30;
+  const base = loop[k];
+  const spur = [1, 2, 3, 4, 5, 6].map(i => [...R.destination(base, 270, i * 100), 300]);
+  const coords = [...loop.slice(0, k + 1), ...spur, ...spur.slice(0, -1).reverse(), ...loop.slice(k)];
+  const head = ['Longitude', 'Latitude', 'Elevation', 'Distance', 'CostPerKm', 'ElevCost', 'TurnCost', 'NodeCost', 'InitialCost', 'WayTags', 'NodeTags', 'Time', 'Energy'];
+  const tip = spur.at(-1);
+  const messages = [head, [String(Math.round(tip[1] * 1e6)), String(Math.round(tip[0] * 1e6)), '0', '600', '', '', '', '', '', 'highway=track', '', '', ''], ['0', '0', '0', '12000', '', '', '', '', '', 'highway=tertiary', '', '', '']];
+  const res = R.cleanRoute({ coords, meters: 13200, ascent: 0, messages });
+  assert.equal(res.spurs, 1);
+  assert.ok(Math.abs(res.meters - 12000) < 200);
+  assert.equal(res.messages.length, 2, 'le tronçon de piste est retiré');
+});

@@ -1,6 +1,6 @@
 /* Planification de boucles : génère des candidates dans plusieurs directions,
    les fait router par BRouter puis les classe (distance, dénivelé, vent, trafic). */
-import { loopWaypoints, simulate, overlapRatio, roadMix, scoreRoute, windShares, ROAD_FACTOR } from './ride.js';
+import { loopWaypoints, simulate, overlapRatio, roadMix, scoreRoute, windShares, cleanRoute, ROAD_FACTOR } from './ride.js';
 import { route } from '../services/routing.js';
 import { fetchWind } from '../services/wind.js';
 
@@ -68,7 +68,8 @@ export async function planLoops({ start, km, ascent, quiet, startTime, power, ma
       for (const stretch of [1.25, 1, 1.6]) {
         const waypoints = loopWaypoints(start, heading, km, { factor, stretch });
         try {
-          const res = await route(waypoints, quiet, { signal });
+          // Les allers-retours (impasses, chemins vers un point de passage) sont retirés.
+          const res = cleanRoute(await route(waypoints, quiet, { signal }));
           return evaluate({ ...res, waypoints }, heading, factor);
         } catch (error) {
           if (signal?.aborted) throw error;
