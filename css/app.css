@@ -384,3 +384,15 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 .gpx-import:hover, .gpx-import:focus-within { border-color: var(--accent-text); color: var(--text); }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .export-hint { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-3); }
+
+/* ---------- iPhone : la carte passe sous la barre d'état (heure, réseau, batterie) ----------
+   Elle reste en plein écran, mais ses commandes et bandeaux sont décalés sous l'encoche. */
+@media (max-width: 959px) {
+  .map .leaflet-top { top: env(safe-area-inset-top, 0px); }
+  .map .leaflet-left { left: env(safe-area-inset-left, 0px); }
+  .map .leaflet-right { right: env(safe-area-inset-right, 0px); }
+  .map-banner { top: calc(12px + env(safe-area-inset-top, 0px)); }
+  .map-wrap { min-height: calc(280px + env(safe-area-inset-top, 0px)); height: calc(44vh + env(safe-area-inset-top, 0px)); }
+  /* Léger dégradé derrière la barre d'état pour garder l'heure lisible sur un fond clair. */
+  .map-wrap::before { content: ""; position: absolute; z-index: 450; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background: linear-gradient(to bottom, rgba(0, 0, 0, .45), rgba(0, 0, 0, 0)); pointer-events: none; }
+}
