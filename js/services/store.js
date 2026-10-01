@@ -56,3 +56,75 @@ export const loadDone = () => {
   return done && typeof done === 'object' && !Array.isArray(done) ? done : {};
 };
 export const saveDone = done => write('pv_cols_done', done);
+
+/* ---------- Sauvegarde / restauration (fichier JSON) ---------- */
+const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme'];
+
+/** Toutes les données de l'app, telles qu'enregistrées (texte brut par clé). */
+export function exportBackup() {
+  const data = {};
+  for (const key of BACKUP_KEYS) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) data[key] = raw;
+    } catch {
+      /* stockage indisponible : clé ignorée */
+    }
+  }
+  return { app: 'echappee', version: 1, exportedAt: new Date().toISOString(), data };
+}
+
+/**
+ * Vérifie un fichier de sauvegarde et résume son contenu.
+ * @returns {{data:Record<string,string>, summary:{favoris:number, cols:number, profil:boolean, exportedAt:string|null}}}
+ */
+export function readBackup(text) {
+  let json;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new Error('Ce fichier n’est pas une sauvegarde Échappée.');
+  }
+  if (!json || json.app !== 'echappee' || typeof json.data !== 'object' || !json.data) throw new Error('Ce fichier n’est pas une sauvegarde Échappée.');
+  const data = {};
+  for (const key of BACKUP_KEYS) {
+    const raw = json.data[key];
+    if (typeof raw !== 'string') continue;
+    if (key !== 'pv_theme') {
+      try {
+        JSON.parse(raw);
+      } catch {
+        throw new Error('Sauvegarde endommagée : restauration annulée.');
+      }
+    }
+    data[key] = raw;
+  }
+  if (!Object.keys(data).length) throw new Error('Cette sauvegarde est vide.');
+  const parse = (k, d) => {
+    try {
+      return data[k] ? JSON.parse(data[k]) : d;
+    } catch {
+      return d;
+    }
+  };
+  const saved = parse('pv_saved', []);
+  const done = parse('pv_cols_done', {});
+  return {
+    data,
+    summary: {
+      favoris: Array.isArray(saved) ? saved.length : 0,
+      cols: done && typeof done === 'object' ? Object.keys(done).length : 0,
+      profil: !!data.pv_profile,
+      exportedAt: typeof json.exportedAt === 'string' ? json.exportedAt : null
+    }
+  };
+}
+
+/** Remplace les données actuelles par celles de la sauvegarde. */
+export function applyBackup(data) {
+  for (const key of BACKUP_KEYS) {
+    if (!(key in data)) continue;
+    if (!write(key, data[key])) return false;
+  }
+  return true;
+}

@@ -396,3 +396,10 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
   /* Léger dégradé derrière la barre d'état pour garder l'heure lisible sur un fond clair. */
   .map-wrap::before { content: ""; position: absolute; z-index: 450; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background: linear-gradient(to bottom, rgba(0, 0, 0, .45), rgba(0, 0, 0, 0)); pointer-events: none; }
 }
+
+/* ---------- Mes données ---------- */
+.backup { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); }
+.backup .h2 { margin-bottom: 0; }
+.backup__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.backup__actions .btn { flex: 1 1 180px; cursor: pointer; }
+.backup__confirm { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 12px; background: var(--accent-soft); border: 1px solid var(--accent); font-size: 14px; }

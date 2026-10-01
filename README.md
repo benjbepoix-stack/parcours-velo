@@ -20,6 +20,7 @@ Application web (installable sur iPhone et Android) qui propose des **boucles et
 - **Analyse d'un GPX** : « Analyser un fichier GPX » charge une trace existante (Komoot, Strava, Garmin…) et calcule l'effet du vent au jour et à l'heure choisis : vent de face / dos, temps perdu ou gagné, meilleur créneau, profil. Pour une boucle, l'app compare avec le sens inverse et propose de l'inverser si le vent y est plus favorable.
 - **Favoris** : enregistre une boucle, rouvre-la plus tard avec le vent d'un autre jour, renomme, exporte, supprime.
 - **Profil cycliste** : FTP, poids, poids du vélo et position sur le vélo, enregistrés automatiquement à chaque modification.
+- **Mes données** (onglet Profil) : « Sauvegarder mes données » crée un fichier `echappee-sauvegarde-AAAA-MM-JJ.json` (profil, favoris, cols faits, réglages) à garder dans Fichiers ou iCloud Drive ; « Restaurer une sauvegarde » le relit, après confirmation, sur le même appareil ou un autre. Chaque personne qui installe l'app a ses propres données, stockées uniquement sur son téléphone.
 - **Heatmap Strava** : lien vers la heatmap centrée sur la boucle pour vérifier que les cyclistes empruntent ces routes. (Strava ne propose pas d'accès public à ses tuiles : elles ne peuvent pas être intégrées au calcul.)
 - Thème clair / sombre, fonctionne hors ligne pour l'interface, les favoris et l'export (le calcul d'itinéraires et la météo demandent du réseau).
 

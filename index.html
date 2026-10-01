@@ -162,6 +162,16 @@
           <p class="hint">Ces valeurs servent à estimer la vitesse, la durée et l’effet du vent. L’intensité de chaque séance est un pourcentage de votre FTP.</p>
           <p class="profile-status" id="profileStatus" role="status" aria-live="polite">Enregistrement automatique sur cet appareil.</p>
         </form>
+        <section class="backup" aria-labelledby="backupTitle">
+          <h2 class="h2" id="backupTitle">Mes données</h2>
+          <p class="hint">Profil, favoris, cols faits et réglages restent sur ce téléphone. Gardez une copie dans Fichiers ou iCloud Drive pour les retrouver sur un autre appareil.</p>
+          <div class="backup__actions">
+            <button type="button" class="btn btn--primary" id="backupSave"><span data-icon="download"></span><span>Sauvegarder mes données</span></button>
+            <label class="btn btn--soft" for="backupFile"><span data-icon="upload"></span><span>Restaurer une sauvegarde</span></label>
+            <input type="file" id="backupFile" class="visually-hidden">
+          </div>
+          <div class="backup__confirm" id="backupConfirm" hidden></div>
+        </section>
         <div class="about">
           <h2 class="h2">Comment ça marche</h2>
           <ol class="steps">

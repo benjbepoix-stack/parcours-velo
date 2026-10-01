@@ -914,6 +914,69 @@ function saveProfileFromForm() {
   }
 }
 
+/* ---------- Sauvegarde / restauration des données ---------- */
+async function saveBackup() {
+  const backup = store.exportBackup();
+  const day = new Date().toISOString().slice(0, 10);
+  const name = `echappee-sauvegarde-${day}.json`;
+  const file = new File([JSON.stringify(backup, null, 2)], name, { type: 'application/json' });
+  try {
+    // iPhone : feuille de partage → « Enregistrer dans Fichiers » ou iCloud Drive.
+    if (navigator.canShare?.({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'Sauvegarde Échappée' });
+      return;
+    }
+  } catch (error) {
+    if (error.name === 'AbortError') return;
+  }
+  const url = URL.createObjectURL(file);
+  const a = Object.assign(document.createElement('a'), { href: url, download: name });
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  toast('Sauvegarde téléchargée');
+}
+
+let pendingBackup = null;
+
+async function readBackupFile(file) {
+  const box = $('#backupConfirm');
+  if (!file) return;
+  try {
+    if (file.size > 5 * 1024 * 1024) throw new Error('Fichier trop volumineux pour une sauvegarde Échappée.');
+    const { data, summary } = store.readBackup(await file.text());
+    pendingBackup = data;
+    const when = summary.exportedAt ? new Date(summary.exportedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : 'date inconnue';
+    box.innerHTML = `
+      <p><strong>Sauvegarde du ${esc(when)}</strong> : ${summary.profil ? 'profil, ' : ''}${summary.favoris} favori${summary.favoris > 1 ? 's' : ''}, ${summary.cols} col${summary.cols > 1 ? 's' : ''} fait${summary.cols > 1 ? 's' : ''}.</p>
+      <p class="hint">Les données actuelles de ce téléphone seront remplacées.</p>
+      <div class="backup__actions">
+        <button type="button" class="btn btn--primary" data-backup="apply">Restaurer</button>
+        <button type="button" class="btn btn--soft" data-backup="cancel">Annuler</button>
+      </div>`;
+    box.hidden = false;
+  } catch (error) {
+    pendingBackup = null;
+    box.hidden = true;
+    toast(error.message || 'Lecture de la sauvegarde impossible.', { error: true });
+  }
+}
+
+function onBackupConfirm(e) {
+  const action = e.target.closest('[data-backup]')?.dataset.backup;
+  if (!action) return;
+  const box = $('#backupConfirm');
+  if (action === 'cancel' || !pendingBackup) {
+    pendingBackup = null;
+    box.hidden = true;
+    return;
+  }
+  if (!store.applyBackup(pendingBackup)) return toast('Restauration impossible : stockage du navigateur indisponible.', { error: true });
+  toast('Données restaurées');
+  setTimeout(() => location.reload(), 600);
+}
+
 /* ---------- Import d'un GPX : effet du vent sur un parcours existant ---------- */
 async function importGPX(file) {
   if (!file) return;
@@ -1044,6 +1107,12 @@ function init() {
     refreshTime();
   });
   $('#rideForm').addEventListener('submit', generate);
+  $('#backupSave').addEventListener('click', saveBackup);
+  $('#backupFile').addEventListener('change', e => {
+    readBackupFile(e.target.files?.[0]);
+    e.target.value = '';
+  });
+  $('#backupConfirm').addEventListener('click', onBackupConfirm);
   $('#gpxFile').addEventListener('change', e => {
     importGPX(e.target.files?.[0]);
     e.target.value = '';
