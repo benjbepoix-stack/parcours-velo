@@ -420,7 +420,8 @@ export function scoreRoute(r, target, { loop = true } = {}) {
   const half = splitHeadwind(r.sim);
   // Tactique : vent de face à l'aller, dans le dos au retour (bonus), l'inverse est pénalisé.
   const tactic = loop ? (half.second - half.first) / 12 : 0;
-  const traffic = r.mix.major * 1.5 + r.mix.medium * 0.4;
+  const mix = r.mix || { major: 0, medium: 0, unpaved: 0 }; // GPX importé : routes inconnues
+  const traffic = mix.major * 1.5 + mix.medium * 0.4;
   const parts = {
     distance: distErr * 3,
     elevation: elevErr * 1.6,
@@ -428,7 +429,7 @@ export function scoreRoute(r, target, { loop = true } = {}) {
     tactic,
     overlap: r.overlap * 2,
     traffic,
-    unpaved: r.mix.unpaved * 12
+    unpaved: mix.unpaved * 12
   };
   return { total: Object.values(parts).reduce((s, v) => s + v, 0), parts, half, windCost };
 }
@@ -536,6 +537,46 @@ export function simplify(coords, tolerance = 12) {
     }
   }
   return coords.filter((_, i) => keep[i]);
+}
+
+/* ---------- Import GPX ---------- */
+
+/**
+ * Lit un fichier GPX (traces, routes ou à défaut points de passage).
+ * Analyse textuelle tolérante, sans dépendance au DOM (testable sous Node).
+ * @returns {{name:string|null, coords:Array<[number,number,number|null]>}}
+ */
+export function parseGPX(text) {
+  const src = String(text || '');
+  if (!/<gpx[\s>]/i.test(src)) throw new Error('Ce fichier n’est pas un GPX.');
+  const attr = (attrs, key) => {
+    const m = attrs.match(new RegExp(`\\b${key}\\s*=\\s*["']([^"']+)["']`, 'i'));
+    return m ? Number(m[1]) : NaN;
+  };
+  const read = tag => {
+    const out = [];
+    const re = new RegExp(`<${tag}\\b([^>]*?)(?:/>|>([\\s\\S]*?)</${tag}>)`, 'gi');
+    let m;
+    while ((m = re.exec(src))) {
+      const lat = attr(m[1], 'lat');
+      const lon = attr(m[1], 'lon');
+      if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) continue;
+      const ele = m[2] ? Number((m[2].match(/<ele>\s*([-\d.]+)\s*<\/ele>/i) || [])[1]) : NaN;
+      out.push([lat, lon, Number.isFinite(ele) ? ele : null]);
+    }
+    return out;
+  };
+  let coords = read('trkpt');
+  if (coords.length < 2) coords = read('rtept');
+  if (coords.length < 2) coords = read('wpt');
+  if (coords.length < 2) throw new Error('Aucune trace trouvée dans ce fichier GPX.');
+  // Points trop proches (< 5 m) retirés : traces enregistrées à la seconde.
+  const thin = [coords[0]];
+  for (const c of coords.slice(1)) if (haversine(thin[thin.length - 1], c) >= 5) thin.push(c);
+  if (thin[thin.length - 1] !== coords[coords.length - 1]) thin.push(coords[coords.length - 1]);
+  const nameMatch = src.match(/<(?:trk|rte|metadata)>[\s\S]*?<name>([\s\S]*?)<\/name>/i);
+  const name = nameMatch ? nameMatch[1].replace(/<!\[CDATA\[|\]\]>/g, '').replace(/&(amp|lt|gt|quot|apos);/g, (_, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" })[e]).trim().slice(0, 80) || null : null;
+  return { name, coords: thin };
 }
 
 /* ---------- Export ---------- */

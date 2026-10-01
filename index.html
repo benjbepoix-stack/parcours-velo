@@ -52,6 +52,8 @@
             <ol class="stops" id="stops"></ol>
             <button type="button" class="add-stop" id="addVia"><span data-icon="plus"></span><span>Ajouter un point de passage</span></button>
             <p class="hint">Astuce : touchez la carte pour placer un point, faites glisser un repère pour le déplacer.</p>
+            <label class="gpx-import" for="gpxFile"><span data-icon="upload"></span><span>Analyser un fichier GPX (effet du vent)</span></label>
+            <input type="file" id="gpxFile" class="visually-hidden">
           </section>
 
           <section class="step" aria-labelledby="stepSession">
@@ -158,7 +160,7 @@
             </div>
           </div>
           <p class="hint">Ces valeurs servent à estimer la vitesse, la durée et l’effet du vent. L’intensité de chaque séance est un pourcentage de votre FTP.</p>
-          <button type="submit" class="btn btn--primary">Enregistrer le profil</button>
+          <p class="profile-status" id="profileStatus" role="status" aria-live="polite">Enregistrement automatique sur cet appareil.</p>
         </form>
         <div class="about">
           <h2 class="h2">Comment ça marche</h2>

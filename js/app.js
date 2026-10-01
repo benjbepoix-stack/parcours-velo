@@ -1,5 +1,5 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
-import { SESSIONS, QUIET_LEVELS, compass, compassLong, haversine, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
+import { SESSIONS, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
 import { brouterWebLink } from './services/routing.js';
@@ -513,6 +513,11 @@ function resimulate(routes, startTime, wind) {
     r.shares = windShares(r.sim);
     r.overlap ??= overlapRatio(r.coords);
     r.score = scoreRoute(r, target, { loop });
+    // GPX importé : même parcours dans l'autre sens, pour comparer l'effet du vent.
+    if (result?.source === 'gpx') {
+      const back = simulate([...r.coords].reverse(), { ...rider(), startTime: t0, wind });
+      r.reverseGain = r.sim.seconds - back.seconds;
+    }
   });
 }
 
@@ -566,6 +571,7 @@ function renderForecast() {
   let advice;
   if (w.speed < 8) advice = 'Vent faible : il ne pèsera pas sur la sortie.';
   else if (result.loop === false && r) advice = r.shares.head > 0.45 ? `Vent de face sur ${pct(r.shares.head)} du trajet : prévoyez de la marge.` : r.shares.tail > 0.45 ? `Vent favorable sur ${pct(r.shares.tail)} du trajet.` : 'Vent surtout de côté sur ce trajet.';
+  else if (result.source === 'gpx') advice = r?.reverseGain >= 180 ? 'Avec ce vent, ce parcours est plus favorable dans l’autre sens.' : 'Ce sens de parcours est le bon avec ce vent.';
   else if (result.kind === 'via') advice = 'Le sens de la boucle a été choisi pour finir avec le vent le plus favorable.';
   else advice = `Partez vers le ${compassLong(w.dir)}, face au vent : le retour se fera vent dans le dos.`;
   host.hidden = false;
@@ -673,6 +679,11 @@ function renderDetail() {
       <p class="text">${result.loop === false ? '1re moitié' : 'Aller'} : <strong>${fh(first)}</strong> · ${result.loop === false ? '2de moitié' : 'Retour'} : <strong>${fh(second)}</strong>. ${
         Math.abs(lost) >= 60 ? `Le vent ${lost > 0 ? 'coûte' : 'fait gagner'} environ <strong>${Math.round(Math.abs(lost) / 60)} min</strong>.` : 'Effet du vent négligeable.'
       }</p>
+      ${
+        result.source === 'gpx' && r.reverseGain >= 180
+          ? `<p class="text">Dans l’autre sens, ce parcours prendrait environ <strong>${Math.round(r.reverseGain / 60)} min de moins</strong> avec ce vent.</p><button type="button" class="btn btn--soft btn--sm" data-action="reverse" style="margin-top:8px">${icon('loop', 16)}<span>Inverser le sens</span></button>`
+          : ''
+      }
     </section>
 
     ${
@@ -694,19 +705,26 @@ function renderDetail() {
       ${elevationChart(r, width)}
     </section>
 
-    <section class="block">
+    ${
+      r.mix
+        ? `<section class="block">
       <h4 class="block__title">Routes empruntées</h4>
       <div class="bar"><span style="--c:var(--tail);flex:${mix.quiet}"></span><span style="--c:var(--sky);flex:${mix.medium}"></span><span style="--c:var(--danger);flex:${mix.major}"></span><span style="--c:var(--text-3);flex:${mix.other}"></span></div>
       <div class="legend"><span style="--c:var(--tail)">Petites routes ${pct(mix.quiet)}</span><span style="--c:var(--sky)">Départementales ${pct(mix.medium)}</span><span style="--c:var(--danger)">Grands axes ${pct(mix.major)}</span>${mix.other > 0.01 ? `<span style="--c:var(--text-3)">Autres ${pct(mix.other)}</span>` : ''}</div>
       ${mix.cycleRoute > 0.05 ? `<p class="text">${pct(mix.cycleRoute)} sur des itinéraires cyclables balisés.</p>` : ''}
       ${warningsFor(r).map(w => `<p class="warn">${icon('alert', 16)}<span>${esc(w)}</span></p>`).join('')}
-    </section>
+    </section>`
+        : warningsFor(r).length
+          ? `<section class="block"><h4 class="block__title">À savoir</h4>${warningsFor(r).map(w => `<p class="warn">${icon('alert', 16)}<span>${esc(w)}</span></p>`).join('')}</section>`
+          : ''
+    }
 
     <div class="actions">
       <button type="button" class="btn btn--primary" data-action="gpx">${icon('download')}<span>Exporter GPX</span></button>
       <button type="button" class="btn btn--soft" data-action="save" ${isSaved ? 'disabled' : ''}>${icon('star')}<span>${isSaved ? 'Enregistré' : 'Enregistrer'}</span></button>
       <a class="btn btn--soft" href="${esc(stravaLink(r))}" target="_blank" rel="noopener">${icon('external')}<span>Heatmap Strava</span></a>
       ${r.waypoints ? `<a class="btn btn--soft" href="${esc(brouterWebLink(r.waypoints, r.quiet || prefs.quiet))}" target="_blank" rel="noopener">${icon('edit')}<span>Retoucher</span></a>` : ''}
+      <p class="export-hint">Komoot, Garmin, Wahoo : exportez le GPX puis choisissez l’app dans la feuille de partage (ou importez-le sur komoot.com).</p>
     </div>`;
 }
 
@@ -869,25 +887,64 @@ function fillProfile() {
   f.cda.value = [0.4, 0.36, 0.32].reduce((a, b) => (Math.abs(b - profile.cda) < Math.abs(a - profile.cda) ? b : a)).toFixed(2);
 }
 
-function submitProfile(e) {
-  e.preventDefault();
-  const f = e.target;
-  const ftp = num(f.ftp.value);
-  const weight = num(f.weight.value);
-  const bike = num(f.bike.value);
-  f.querySelectorAll('[aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
-  const bad = (el, msg) => (el.setAttribute('aria-invalid', 'true'), el.focus(), toast(msg, { error: true }));
-  if (!ftp || ftp < 60 || ftp > 600) return bad(f.ftp, 'FTP entre 60 et 600 W.');
-  if (!weight || weight < 30 || weight > 200) return bad(f.weight, 'Poids entre 30 et 200 kg.');
-  if (!bike || bike < 4 || bike > 30) return bad(f.bike, 'Vélo et équipement entre 4 et 30 kg.');
-  profile = { ftp: Math.round(ftp), weight, bike, cda: Number(f.cda.value), custom: true };
-  store.saveProfile(profile);
+/** Enregistre le profil dès qu'un champ valide change (pas de bouton à penser à toucher). */
+function saveProfileFromForm() {
+  const f = $('#profileForm');
+  const fields = [
+    [f.ftp, num(f.ftp.value), 60, 600, 'FTP entre 60 et 600 W'],
+    [f.weight, num(f.weight.value), 30, 200, 'Poids entre 30 et 200 kg'],
+    [f.bike, num(f.bike.value), 4, 30, 'Vélo et équipement entre 4 et 30 kg']
+  ];
+  const bad = fields.find(([, v, lo, hi]) => v === null || v < lo || v > hi);
+  fields.forEach(([el, v, lo, hi]) => el.toggleAttribute('aria-invalid', v === null || v < lo || v > hi));
+  const status = $('#profileStatus');
+  if (bad) {
+    status.textContent = `${bad[4]} : valeur non enregistrée.`;
+    status.classList.add('is-error');
+    return;
+  }
+  profile = { ftp: Math.round(fields[0][1]), weight: fields[1][1], bike: fields[2][1], cda: Number(f.cda.value), custom: true };
+  const ok = store.saveProfile(profile);
+  status.classList.toggle('is-error', !ok);
+  status.textContent = ok ? 'Profil enregistré ✓' : 'Enregistrement impossible : stockage du navigateur indisponible (navigation privée ?).';
   renderRider();
   if (result) {
     resimulate(result.routes, result.startTime, result.wind);
     renderAll({ fit: false });
   }
-  toast('Profil enregistré');
+}
+
+/* ---------- Import d'un GPX : effet du vent sur un parcours existant ---------- */
+async function importGPX(file) {
+  if (!file) return;
+  if (file.size > 15 * 1024 * 1024) return toast('Fichier trop volumineux (15 Mo maximum).', { error: true });
+  try {
+    const { name, coords } = parseGPX(await file.text());
+    const startTime = getStartTime() || new Date();
+    const wind = await fetchWind(coords[0][0], coords[0][1], startTime);
+    const t0 = startTime.getTime();
+    const cum = cumulative(coords);
+    const loop = haversine(coords[0], coords[coords.length - 1]) < 1000;
+    const r = {
+      coords,
+      meters: cum[cum.length - 1],
+      ascent: Math.round(ascentOf(coords)),
+      messages: [],
+      mix: null,
+      name: name || file.name.replace(/\.gpx$/i, ''),
+      subtitle: `GPX importé · ${loop ? 'boucle' : 'aller simple'}`,
+      heading: bearing(coords[0], coords[Math.min(coords.length - 1, Math.floor(coords.length / 4))])
+    };
+    result = { routes: [r], wind, windNow: wind.reduce((b, h) => (Math.abs(h.t - t0) < Math.abs(b.t - t0) ? h : b), wind[0]), startTime, target: { km: null, ascent: null }, source: 'gpx', loop, kind: loop ? 'gpx' : 'oneway' };
+    resimulate(result.routes, startTime, wind);
+    selected = 0;
+    renderAll();
+    if (!coords.some(c => c[2] !== null)) toast('Ce GPX ne contient pas d’altitude : la pente n’est pas prise en compte.');
+    if (matchMedia('(max-width: 959px)').matches) $('.map-wrap').scrollIntoView({ behavior: 'smooth' });
+  } catch (error) {
+    console.warn('[gpx]', error);
+    toast(/fetch|network/i.test(error.message) ? friendlyError(error) : error.message || 'Lecture du GPX impossible.', { error: true });
+  }
 }
 
 /* ---------- Initialisation ---------- */
@@ -987,6 +1044,10 @@ function init() {
     refreshTime();
   });
   $('#rideForm').addEventListener('submit', generate);
+  $('#gpxFile').addEventListener('change', e => {
+    importGPX(e.target.files?.[0]);
+    e.target.value = '';
+  });
   $('#f-date').addEventListener('change', refreshTime);
   $('#f-time').addEventListener('change', refreshTime);
 
@@ -1005,6 +1066,12 @@ function init() {
     const r = result?.routes[selected];
     if (action === 'gpx') exportGPX(r);
     if (action === 'save') saveRoute(r);
+    if (action === 'reverse' && r) {
+      r.coords = [...r.coords].reverse();
+      r.name = r.name.endsWith(' (sens inverse)') ? r.name.replace(' (sens inverse)', '') : `${r.name} (sens inverse)`;
+      resimulate(result.routes, result.startTime, result.wind);
+      renderAll({ fit: false });
+    }
     const slot = e.target.closest('[data-start]');
     if (slot) pickStart(Number(slot.dataset.start));
   });
@@ -1016,7 +1083,20 @@ function init() {
     }
   });
   $('#savedList').addEventListener('click', onSavedAction);
-  $('#profileForm').addEventListener('submit', submitProfile);
+  const profileForm = $('#profileForm');
+  let profileTimer = null;
+  profileForm.addEventListener('submit', e => {
+    e.preventDefault();
+    saveProfileFromForm();
+  });
+  profileForm.addEventListener('input', () => {
+    clearTimeout(profileTimer);
+    profileTimer = setTimeout(saveProfileFromForm, 500);
+  });
+  profileForm.addEventListener('change', () => {
+    clearTimeout(profileTimer);
+    saveProfileFromForm();
+  });
   initCols({
     getStart: () => (isPoint(prefs.start) ? ll(prefs.start) : null),
     onRide: col => {

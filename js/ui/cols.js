@@ -9,6 +9,7 @@ const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const fr = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
 const sectorOf = id => SECTORS.find(s => s.id === id);
+const CAT_LABEL = { HC: 'Hors catégorie', 1: '1re catégorie', 2: '2e catégorie', 3: '3e catégorie', 4: '4e catégorie' };
 
 let done = store.loadDone();
 const view = { tab: 'top', sector: 'all', status: 'all', sort: 'score', query: '' };
@@ -64,13 +65,13 @@ function colCard(c, { rank = null, why = null } = {}) {
         <h3 class="col__name">${esc(c.name)}</h3>
         <p class="col__meta">depuis ${esc(c.from)} · ${esc(s.short)} · ${esc(c.area)}${km !== null ? ` · à ${Math.round(km)} km` : ''}</p>
       </div>
-      <span class="cat cat--${c.cat}" title="Catégorie estimée (indice ${fr(c.score)})">${c.cat === 'HC' ? 'HC' : `${c.cat}<sup>e</sup>`}</span>
+      <span class="cat cat--${c.cat}" title="Catégorie estimée (indice ${fr(c.score)})" aria-label="${CAT_LABEL[c.cat]}">${c.cat === 'HC' ? 'HC' : `${c.cat}<span class="cat__suf">${c.cat === '1' ? 're' : 'e'}</span>`}</span>
     </header>
     ${why ? `<p class="col__why">${esc(why)}</p>` : ''}
     ${statsLine(c)}
     ${c.note ? `<p class="col__note">${esc(c.note)}</p>` : ''}
     <div class="col__actions">
-      <button type="button" class="done-toggle" data-col-action="done" aria-pressed="${isDone}">${icon('check', 16)}<span>${isDone ? `Gravi${done[c.id] > 1 ? ` le ${new Date(done[c.id]).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}` : 'Je l’ai fait'}</span></button>
+      <button type="button" class="done-toggle" data-col-action="done" aria-pressed="${isDone}" aria-label="${isDone ? `${esc(c.name)} : fait (toucher pour annuler)` : `Marquer ${esc(c.name)} comme fait`}">${icon('check', 16)}<span>${isDone ? 'Fait' : 'Je l’ai fait'}</span></button>
       <button type="button" class="btn btn--soft btn--sm" data-col-action="map">${icon('map', 16)}<span>Carte</span></button>
       <button type="button" class="btn btn--soft btn--sm" data-col-action="ride">${icon('route', 16)}<span>Y passer</span></button>
     </div>

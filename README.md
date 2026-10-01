@@ -16,9 +16,10 @@ Application web (installable sur iPhone et Android) qui propose des **boucles et
 - **Belles boucles** : les allers-retours parasites (impasse ou chemin menant à un point de passage, petite boucle qui revient au même carrefour) sont détectés et retirés du tracé ; distance, dénivelé et analyse des routes sont recalculés. Chaque boucle affiche la part de petites routes, de départementales, de grands axes, de revêtement non asphalté et d'itinéraires cyclables balisés, avec des alertes (grands axes, chemins, rafales, pluie, routes empruntées deux fois).
 - **Carte lisible** : fond épuré *Plan* (CARTO, clair ou sombre selon le thème), ou *Vélo (CyclOSM)* et *Relief* ; calque des itinéraires cyclables balisés. Tracé épais avec liseré, coloré selon le vent (dos / côté / face), chevrons de sens et bornes kilométriques.
 - **Profil altimétrique** avec la bande de vent rencontré.
-- **Export GPX** (Garmin, Wahoo, Komoot, Strava…) via la feuille de partage sur mobile.
+- **Export GPX** (Garmin, Wahoo, Komoot, Strava…) via la feuille de partage sur mobile. Komoot n'ouvre pas d'API publique pour créer des parcours : exporter le GPX puis choisir Komoot dans la feuille de partage (ou l'importer sur komoot.com).
+- **Analyse d'un GPX** : « Analyser un fichier GPX » charge une trace existante (Komoot, Strava, Garmin…) et calcule l'effet du vent au jour et à l'heure choisis : vent de face / dos, temps perdu ou gagné, meilleur créneau, profil. Pour une boucle, l'app compare avec le sens inverse et propose de l'inverser si le vent y est plus favorable.
 - **Favoris** : enregistre une boucle, rouvre-la plus tard avec le vent d'un autre jour, renomme, exporte, supprime.
-- **Profil cycliste** : FTP, poids, poids du vélo et position sur le vélo.
+- **Profil cycliste** : FTP, poids, poids du vélo et position sur le vélo, enregistrés automatiquement à chaque modification.
 - **Heatmap Strava** : lien vers la heatmap centrée sur la boucle pour vérifier que les cyclistes empruntent ces routes. (Strava ne propose pas d'accès public à ses tuiles : elles ne peuvent pas être intégrées au calcul.)
 - Thème clair / sombre, fonctionne hors ligne pour l'interface, les favoris et l'export (le calcul d'itinéraires et la météo demandent du réseau).
 
@@ -31,7 +32,7 @@ L'onglet **Cols** rassemble une centaine de cols routiers : Alpes du Nord, Alpes
 - Pour chaque col et versant : altitude, longueur, pente moyenne et maximale, dénivelé, catégorie estimée (HC, 1re à 4e, d'après l'indice de difficulté FIETS).
 - **Top 10** des cols à faire, avec la raison du choix.
 - Filtres par secteur, recherche, tri (les plus durs, les plus proches de ton départ, les plus hauts) et statut (à faire / gravis).
-- **Je l'ai fait** : coche les cols gravis (date enregistrée) ; progression globale et par secteur, dénivelé cumulé. Les données restent sur l'appareil.
+- **Je l'ai fait** : coche les cols gravis (une coche « Fait ») ; progression globale et par secteur, dénivelé cumulé. Les données restent sur l'appareil.
 - **Carte** : les cols s'affichent sur la carte ; **Y passer** ajoute le col comme point de passage de la prochaine sortie.
 
 Les chiffres sont indicatifs (versant indiqué) : vérifie le profil exact avant une sortie engagée.

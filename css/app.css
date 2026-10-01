@@ -354,8 +354,8 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 .col__meta { font-size: 12.5px; color: var(--text-3); margin-top: 3px; }
 .col__why { font-size: 13.5px; color: var(--text-2); }
 .col__note { font-size: 12.5px; color: var(--amber); font-weight: 600; }
-.cat { flex: none; min-width: 36px; height: 26px; padding: 0 7px; display: grid; place-items: center; border-radius: 7px; font: italic 800 15px var(--display); background: var(--surface-2); color: var(--text-2); border: 1px solid var(--line-2); }
-.cat sup { font-size: 9px; }
+.cat { flex: none; min-width: 40px; height: 26px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; gap: 1px; border-radius: 7px; font: italic 800 15px/1 var(--display); white-space: nowrap; background: var(--surface-2); color: var(--text-2); border: 1px solid var(--line-2); }
+.cat__suf { font-size: 10px; align-self: flex-start; margin-top: 4px; }
 .cat--HC { background: var(--text); color: var(--bg); border-color: transparent; }
 .cat--1 { background: var(--head); color: #fff; border-color: transparent; }
 .cat--2 { background: var(--cross); color: #17181c; border-color: transparent; }
@@ -376,3 +376,11 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 .col-popup { display: flex; flex-direction: column; gap: 6px; min-width: 190px; font-size: 12.5px; }
 .col-popup strong { font: italic 800 17px var(--display); }
 .col-popup span { color: var(--text-2); }
+
+.profile-status { font-size: 13px; color: var(--tail); font-weight: 650; }
+.profile-status.is-error { color: var(--danger); }
+
+.gpx-import { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1.5px dashed var(--line-2); color: var(--text-2); font-weight: 700; font-size: 14px; cursor: pointer; }
+.gpx-import:hover, .gpx-import:focus-within { border-color: var(--accent-text); color: var(--text); }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.export-hint { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-3); }

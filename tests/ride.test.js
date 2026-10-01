@@ -209,3 +209,25 @@ test('scoreRoute en aller simple : pas de bonus tactique ni de cible de distance
   assert.equal(s.parts.tactic, 0);
   assert.equal(s.parts.distance, 0);
 });
+
+/* ---------- Import GPX ---------- */
+test('parseGPX lit traces, routes, altitude et nom', () => {
+  const gpx = `<?xml version="1.0"?><gpx version="1.1"><trk><name>Tour &amp; col</name><trkseg>
+    <trkpt lat="47.2" lon="6.0"><ele>250</ele></trkpt>
+    <trkpt lon="6.01" lat="47.21"><ele>300.5</ele></trkpt>
+    <trkpt lat="47.2100001" lon="6.0100001"/>
+    <trkpt lat="47.22" lon="6.02"></trkpt></trkseg></trk></gpx>`;
+  const { name, coords } = R.parseGPX(gpx);
+  assert.equal(name, 'Tour & col');
+  assert.equal(coords.length, 3, 'point en double (< 5 m) retiré');
+  assert.deepEqual(coords[1], [47.21, 6.01, 300.5]);
+  assert.equal(coords[2][2], null);
+  assert.equal(R.parseGPX('<gpx><rte><rtept lat="45" lon="6"/><rtept lat="45.1" lon="6.1"/></rte></gpx>').coords.length, 2);
+});
+
+test('parseGPX relit les GPX exportés par l’app et refuse les autres fichiers', () => {
+  const pts = [[47, 6, 250], [47.01, 6.01, 260], [47.02, 6.0, null]];
+  assert.deepEqual(R.parseGPX(R.toGPX('Boucle', pts)).coords, pts);
+  assert.throws(() => R.parseGPX('<html></html>'), /pas un GPX/);
+  assert.throws(() => R.parseGPX('<gpx></gpx>'), /Aucune trace/);
+});
