@@ -41,30 +41,61 @@
       <!-- ============ SORTIE ============ -->
       <section class="pane" id="pane-ride" role="tabpanel" aria-labelledby="tab-ride">
         <form class="form" id="rideForm" novalidate>
-          <fieldset class="field">
-            <legend class="label">Type de séance</legend>
-            <div class="chips" id="sessionChips" role="radiogroup" aria-label="Type de séance"></div>
+          <div class="segmented segmented--mode" id="modeSwitch" role="radiogroup" aria-label="Type de parcours">
+            <button type="button" role="radio" data-mode="loop" aria-checked="true"><span data-icon="loop"></span>Boucle</button>
+            <button type="button" role="radio" data-mode="oneway" aria-checked="false"><span data-icon="arrow"></span>Aller simple</button>
+          </div>
+
+          <section class="step" aria-labelledby="stepRoute">
+            <h2 class="step__title" id="stepRoute">Itinéraire</h2>
+            <ol class="stops" id="stops"></ol>
+            <button type="button" class="add-stop" id="addVia"><span data-icon="plus"></span><span>Ajouter un point de passage</span></button>
+            <p class="hint">Astuce : touchez la carte pour placer un point, faites glisser un repère pour le déplacer.</p>
+          </section>
+
+          <section class="step" aria-labelledby="stepSession">
+            <h2 class="step__title" id="stepSession">Séance</h2>
+            <div class="chips" id="sessionChips" role="radiogroup" aria-labelledby="stepSession"></div>
             <p class="hint" id="sessionHint"></p>
-          </fieldset>
-          <div class="grid2">
-            <div class="field"><label class="label" for="f-km">Distance · km</label><input class="input" id="f-km" name="km" inputmode="numeric" autocomplete="off"></div>
-            <div class="field"><label class="label" for="f-ascent">Dénivelé · m <span class="opt">(auto)</span></label><input class="input" id="f-ascent" name="ascent" inputmode="numeric" autocomplete="off" placeholder="Auto"></div>
-            <div class="field"><label class="label" for="f-date">Jour</label><input class="input" id="f-date" type="date" name="date"></div>
-            <div class="field"><label class="label" for="f-time">Heure de départ</label><input class="input" id="f-time" type="time" name="time" step="900"></div>
-          </div>
-          <div class="field"><label class="label" for="f-quiet">Routes</label><select class="input" id="f-quiet" name="quiet"></select></div>
-          <div class="field">
-            <label class="label" for="f-place">Départ</label>
-            <div class="place-row">
-              <input class="input" id="f-place" name="place" autocomplete="off" placeholder="Ville ou adresse" enterkeyhint="search">
-              <button type="button" class="btn btn--soft btn--square" id="placeSearch" aria-label="Rechercher le lieu" data-icon="search"></button>
-              <button type="button" class="btn btn--soft btn--square" id="locateMe" aria-label="Utiliser ma position" data-icon="locate"></button>
+            <div class="range-field" id="distanceField">
+              <div class="range-field__head"><label class="label" for="f-km">Distance</label><output class="range-field__value" id="kmOut" for="f-km"></output></div>
+              <input type="range" id="f-km" min="20" max="200" step="5">
+              <p class="hint" id="distanceHint"></p>
             </div>
-            <p class="hint" id="startLabel"></p>
+          </section>
+
+          <section class="step" aria-labelledby="stepWhen">
+            <h2 class="step__title" id="stepWhen">Départ</h2>
+            <div class="when">
+              <div class="chips" id="dayChips" role="radiogroup" aria-labelledby="stepWhen">
+                <button type="button" class="chip" role="radio" data-day="today">Aujourd’hui</button>
+                <button type="button" class="chip" role="radio" data-day="tomorrow">Demain</button>
+                <button type="button" class="chip" role="radio" data-day="other">Autre jour</button>
+              </div>
+              <div class="when__inputs">
+                <input class="input" id="f-date" type="date" aria-label="Jour de départ" hidden>
+                <input class="input input--time" id="f-time" type="time" step="900" aria-label="Heure de départ">
+              </div>
+            </div>
+          </section>
+
+          <section class="step" aria-labelledby="stepRoads">
+            <h2 class="step__title" id="stepRoads">Routes</h2>
+            <div class="segmented" id="quietSwitch" role="radiogroup" aria-labelledby="stepRoads"></div>
+          </section>
+
+          <details class="more">
+            <summary>Plus d’options</summary>
+            <div class="more__body">
+              <div class="field"><label class="label" for="f-ascent">Dénivelé visé · m</label><input class="input" id="f-ascent" inputmode="numeric" autocomplete="off" placeholder="Auto"></div>
+              <p class="note" id="riderNote"></p>
+            </div>
+          </details>
+
+          <div class="cta">
+            <button type="submit" class="btn btn--primary btn--lg" id="submitBtn"><span data-icon="route"></span><span id="submitLabel">Trouver mes boucles</span></button>
+            <div class="progress" id="progress" hidden aria-live="polite"><div class="progress__track"><div class="progress__bar"></div></div><span class="progress__label"></span></div>
           </div>
-          <p class="note" id="riderNote"></p>
-          <button type="submit" class="btn btn--primary btn--lg" id="submitBtn"><span data-icon="route"></span><span>Trouver mes boucles</span></button>
-          <div class="progress" id="progress" hidden aria-live="polite"><div class="progress__track"><div class="progress__bar"></div></div><span class="progress__label"></span></div>
         </form>
 
         <div id="forecast" class="forecast" hidden></div>
@@ -112,11 +143,12 @@
         </div>
       </section>
 
-      <footer class="credits">Itinéraires BRouter · cartes © OpenStreetMap, CyclOSM · météo Open-Meteo · recherche Nominatim</footer>
+      <footer class="credits">Itinéraires BRouter · cartes © OpenStreetMap, CyclOSM · météo Open-Meteo · lieux Photon</footer>
     </aside>
 
     <main class="map-wrap">
       <div class="map" id="map" aria-label="Carte"></div>
+      <div class="map-banner" id="mapBanner" hidden role="status"><span id="mapBannerText"></span><button type="button" class="btn btn--soft btn--sm" id="mapBannerCancel">Annuler</button></div>
       <div class="map-legend" aria-hidden="true"><span style="--c:var(--tail)">Vent dans le dos</span><span style="--c:var(--cross)">De côté</span><span style="--c:var(--head)">De face</span></div>
     </main>
   </div>

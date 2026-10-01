@@ -4,7 +4,9 @@ import { windClass } from './charts.js';
 
 let L = null;
 let map = null;
-let startMarker = null;
+let stopLayer = null;
+let stopMarkers = new Map();
+let callbacks = {};
 let layer = null;
 let planLight = null;
 let planDark = null;
@@ -14,14 +16,17 @@ let lastDraw = null;
 const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const CARTO = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>';
 
-/** @param {{start:[number,number], dark:boolean, onStart:(latlng)=>void}} opts */
-export function initMap(host, { start, dark, onStart }) {
+/**
+ * @param {{center:[number,number], dark:boolean, onTap:(latlng)=>void, onMoveStop:(id, latlng)=>void}} opts
+ */
+export function initMap(host, { center, dark, onTap, onMoveStop }) {
   L = window.L;
   if (!L) {
     host.innerHTML = '<p class="hint" style="padding:16px">Carte indisponible.</p>';
     return false;
   }
-  map = L.map(host, { zoomControl: true, attributionControl: true, zoomSnap: 0.5 }).setView(start, 12);
+  callbacks = { onTap, onMoveStop };
+  map = L.map(host, { zoomControl: true, attributionControl: true, zoomSnap: 0.5 }).setView(center, 12);
   // Fond « Plan » : CARTO Voyager (clair) ou Dark Matter (sombre) — lisible, peu chargé.
   planLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: CARTO });
   planDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: CARTO });
@@ -44,18 +49,9 @@ export function initMap(host, { start, dark, onStart }) {
   host.classList.add('is-plan');
   map._planGroup = plan;
 
-  startMarker = L.marker(start, {
-    draggable: true,
-    title: 'Point de départ',
-    zIndexOffset: 1000,
-    icon: L.divIcon({ className: '', html: '<div class="start-pin" aria-hidden="true"></div>', iconSize: [22, 22], iconAnchor: [11, 11] })
-  }).addTo(map);
-  startMarker.on('dragend', () => {
-    const p = startMarker.getLatLng();
-    onStart([p.lat, p.lng]);
-  });
-  map.on('click', e => onStart([e.latlng.lat, e.latlng.lng]));
+  map.on('click', e => callbacks.onTap?.([e.latlng.lat, e.latlng.lng]));
   layer = L.layerGroup().addTo(map);
+  stopLayer = L.layerGroup().addTo(map);
   new ResizeObserver(() => map.invalidateSize()).observe(host);
   return true;
 }
@@ -69,10 +65,56 @@ export function setMapTheme(dark) {
   if (lastDraw) drawRoute(lastDraw.route, { fit: false });
 }
 
-export function setStart(latlng, { pan = false } = {}) {
+/**
+ * Affiche les étapes (départ A, passages numérotés, arrivée B), déplaçables au doigt.
+ * @param {Array<{id:string, kind:'start'|'via'|'end', label:string, latlng:[number,number]}>} stops
+ */
+export function setStops(stops, { fit = false } = {}) {
   if (!map) return;
-  startMarker.setLatLng(latlng);
-  if (pan) map.setView(latlng, Math.max(map.getZoom(), 12));
+  stopLayer.clearLayers();
+  stopMarkers = new Map();
+  for (const s of stops) {
+    const marker = L.marker(s.latlng, {
+      draggable: true,
+      title: s.title || s.label,
+      zIndexOffset: s.kind === 'start' ? 1000 : 900,
+      icon: L.divIcon({ className: '', html: `<div class="stop-pin stop-pin--${s.kind}">${s.label}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] })
+    }).addTo(stopLayer);
+    marker.on('dragend', () => {
+      const p = marker.getLatLng();
+      callbacks.onMoveStop?.(s.id, [p.lat, p.lng]);
+    });
+    stopMarkers.set(s.id, marker);
+  }
+  if (fit && stops.length > 1) map.fitBounds(L.latLngBounds(stops.map(s => s.latlng)), { padding: [48, 48], maxZoom: 13 });
+  else if (fit && stops.length === 1) map.setView(stops[0].latlng, Math.max(map.getZoom(), 12));
+}
+
+export function panTo(latlng) {
+  map?.setView(latlng, Math.max(map.getZoom(), 12));
+}
+
+/** Petit menu au point touché : « Départ ici », « Ajouter un passage »… */
+export function showActions(latlng, actions) {
+  if (!map) return;
+  const box = document.createElement('div');
+  box.className = 'map-actions';
+  for (const a of actions) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = `btn btn--sm ${a.primary ? 'btn--primary' : 'btn--soft'}`;
+    btn.textContent = a.label;
+    btn.addEventListener('click', () => {
+      map.closePopup();
+      a.run();
+    });
+    box.appendChild(btn);
+  }
+  L.popup({ closeButton: false, className: 'map-popup', offset: [0, -4], autoPanPadding: [24, 24] }).setLatLng(latlng).setContent(box).openOn(map);
+}
+
+export function closeActions() {
+  map?.closePopup();
 }
 
 const chevron = deg =>

@@ -49,11 +49,11 @@ function uploadProfile(quiet, signal) {
   return promise;
 }
 
-async function call(waypoints, profile, signal) {
+async function call(waypoints, profile, signal, alt = 0) {
   const url = new URL(`${HOST}/brouter`);
   url.searchParams.set('lonlats', waypoints.map(([lat, lon]) => `${lon.toFixed(6)},${lat.toFixed(6)}`).join('|'));
   url.searchParams.set('profile', profile);
-  url.searchParams.set('alternativeidx', '0');
+  url.searchParams.set('alternativeidx', String(alt));
   url.searchParams.set('format', 'geojson');
   const t = withTimeout(signal);
   try {
@@ -82,14 +82,15 @@ const isDataError = e => /not mapped|no track|position|datafile/i.test(e.message
  * Itinéraire passant par les points donnés.
  * @param {Array<[number,number]>} waypoints [lat, lon]
  * @param {keyof QUIET_LEVELS} quiet
+ * @param {{signal?:AbortSignal, alt?:number}} [opts] alt : itinéraire alternatif (0 à 3)
  */
-export async function route(waypoints, quiet = 'quiet', { signal } = {}) {
+export async function route(waypoints, quiet = 'quiet', { signal, alt = 0 } = {}) {
   const level = QUIET_LEVELS[quiet] || QUIET_LEVELS.quiet;
   // 1) Profil vélo de route personnalisé (renvoyé une fois s'il a expiré sur le serveur).
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
       const id = await uploadProfile(quiet, signal);
-      return { ...(await call(waypoints, id, signal)), roadProfile: true };
+      return { ...(await call(waypoints, id, signal, alt)), roadProfile: true };
     } catch (error) {
       if (signal?.aborted || error.name === 'AbortError') throw error;
       if (isDataError(error)) throw error;
@@ -99,7 +100,7 @@ export async function route(waypoints, quiet = 'quiet', { signal } = {}) {
   // 2) Repli : profils intégrés de BRouter.
   for (const profile of [level.fallback, 'fastbike']) {
     try {
-      return { ...(await call(waypoints, profile, signal)), roadProfile: false };
+      return { ...(await call(waypoints, profile, signal, alt)), roadProfile: false };
     } catch (error) {
       if (signal?.aborted || error.name === 'AbortError' || isDataError(error) || profile === 'fastbike') throw error;
     }

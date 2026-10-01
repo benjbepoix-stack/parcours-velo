@@ -59,9 +59,9 @@ export const SESSIONS = {
 
 /** Profils BRouter : du plus direct au plus tranquille. */
 export const QUIET_LEVELS = {
-  normal: { label: 'Standard', traffic: 0, fallback: 'fastbike' },
-  quiet: { label: 'Peu de trafic', traffic: 1, fallback: 'fastbike-lowtraffic' },
-  veryQuiet: { label: 'Très peu de trafic', traffic: 2.5, fallback: 'fastbike-verylowtraffic' }
+  normal: { label: 'Standard', short: 'Standard', traffic: 0, fallback: 'fastbike' },
+  quiet: { label: 'Peu de trafic', short: 'Calme', traffic: 1, fallback: 'fastbike-lowtraffic' },
+  veryQuiet: { label: 'Très peu de trafic', short: 'Très calme', traffic: 2.5, fallback: 'fastbike-verylowtraffic' }
 };
 
 /* ---------- Génération de boucles ---------- */
@@ -409,16 +409,17 @@ export function roadMix(messages) {
 /**
  * Évalue une boucle (plus bas = meilleur).
  * @param {{meters:number, ascent:number, sim:object, overlap:number, mix:object}} r
- * @param {{km:number, ascent:number|null}} target
+ * @param {{km:number|null, ascent:number|null}} target
+ * @param {{loop?:boolean}} [opts] aller simple : pas de bonus « retour vent dans le dos »
  */
-export function scoreRoute(r, target) {
+export function scoreRoute(r, target, { loop = true } = {}) {
   const km = r.meters / 1000;
-  const distErr = Math.abs(km - target.km) / target.km;
+  const distErr = target.km ? Math.abs(km - target.km) / target.km : 0;
   const elevErr = target.ascent === null ? 0 : Math.abs(r.ascent - target.ascent) / Math.max(target.ascent, 250);
   const windCost = r.sim.secondsNoWind ? r.sim.seconds / r.sim.secondsNoWind - 1 : 0;
   const half = splitHeadwind(r.sim);
   // Tactique : vent de face à l'aller, dans le dos au retour (bonus), l'inverse est pénalisé.
-  const tactic = (half.second - half.first) / 12;
+  const tactic = loop ? (half.second - half.first) / 12 : 0;
   const traffic = r.mix.major * 1.5 + r.mix.medium * 0.4;
   const parts = {
     distance: distErr * 3,
@@ -463,6 +464,28 @@ export function windShares(sim) {
   }
   const total = sim.meters || 1;
   return { head: out.head / total, cross: out.cross / total, tail: out.tail / total };
+}
+
+/* ---------- Orientation ---------- */
+
+/** Sens de rotation d'une boucle : > 0 = sens inverse des aiguilles d'une montre. */
+export function signedArea(coords) {
+  let a = 0;
+  for (let i = 1; i < coords.length; i++) a += coords[i - 1][1] * coords[i][0] - coords[i][1] * coords[i - 1][0];
+  return a / 2;
+}
+
+/** Point situé au milieu (à vol d'oiseau) de deux points. */
+export const midpoint = (a, b) => destination(a, bearing(a, b), haversine(a, b) / 2);
+
+/**
+ * Point de détour à insérer sur l'étape a→b pour l'allonger d'environ `extra` mètres
+ * (triangle isocèle, côté `side` = +90 droite / -90 gauche).
+ */
+export function detourPoint(a, b, extra, side) {
+  const L = haversine(a, b);
+  const h = Math.sqrt(Math.max(0, ((L + extra) / 2) ** 2 - (L / 2) ** 2));
+  return destination(midpoint(a, b), bearing(a, b) + side, h);
 }
 
 /* ---------- Créneau de départ ---------- */

@@ -4,6 +4,9 @@ Application web (installable sur iPhone et Android) qui propose des **boucles de
 
 ## Fonctionnalités
 
+- **Boucle ou aller simple** : une boucle autour du départ, ou un trajet d'un point A à un point B (trois itinéraires comparés).
+- **Points de passage** : ajoute les villages, cols ou routes par où tu veux passer, en les tapant (suggestions au fil de la saisie) ou d'un appui sur la carte. En boucle, l'app passe par tes points au plus court, ou ajoute un détour pour atteindre la distance voulue, et choisit le sens de rotation selon le vent. Les repères se déplacent au doigt sur la carte.
+- **Saisie en quelques gestes** : Boucle / Aller simple, étapes, séance, curseur de distance, « Aujourd'hui / Demain / Autre jour », niveau de trafic ; le dénivelé visé est dans « Plus d'options ». Le bouton de calcul reste visible en bas de l'écran.
 - **Séances** : endurance, récupération, intervalles, côtes, sortie longue ou libre. Chaque séance fixe l'intensité (en % de ta FTP) et le dénivelé visé ; distance et dénivelé restent modifiables.
 - **Vent** : prévisions heure par heure (Open-Meteo) au point de départ. Huit boucles sont calculées dans toutes les directions, la première face au vent, puis simulées mètre par mètre avec ta puissance, ton poids, ta position, la pente et le vent prévu à l'heure du passage. Le classement privilégie **l'aller face au vent et le retour vent dans le dos**.
 - **Meilleur créneau** : pour la boucle choisie, la durée estimée selon l'heure de départ (6 h – 20 h), avec le risque de pluie. Un appui sur une barre change l'heure et recalcule tout, sans refaire les itinéraires.
@@ -17,7 +20,7 @@ Application web (installable sur iPhone et Android) qui propose des **boucles de
 - **Heatmap Strava** : lien vers la heatmap centrée sur la boucle pour vérifier que les cyclistes empruntent ces routes. (Strava ne propose pas d'accès public à ses tuiles : elles ne peuvent pas être intégrées au calcul.)
 - Thème clair / sombre, fonctionne hors ligne pour l'interface, les favoris et l'export (le calcul d'itinéraires et la météo demandent du réseau).
 
-Tout est gratuit et sans clé d'API : BRouter, Open-Meteo, Nominatim, tuiles CARTO / OpenStreetMap / CyclOSM / OpenTopoMap / Waymarked Trails. Les données personnelles (profil, favoris) restent dans le navigateur.
+Tout est gratuit et sans clé d'API : BRouter, Open-Meteo, Photon (recherche de lieux), tuiles CARTO / OpenStreetMap / CyclOSM / OpenTopoMap / Waymarked Trails. Les données personnelles (profil, favoris) restent dans le navigateur.
 
 ## Publier avec GitHub Pages
 
@@ -50,7 +53,7 @@ js/app.js               Interface : formulaire, résultats, favoris, profil
 js/core/ride.js         Moteur : géométrie, boucles, physique, vent, score, GPX (sans DOM)
 js/core/planner.js      Génération et classement des boucles
 js/core/dates.js        Dates locales
-js/services/            BRouter, Open-Meteo, Nominatim, stockage local
+js/services/            BRouter (+ profil vélo de route), Open-Meteo, Photon, stockage local
 js/ui/                  Carte Leaflet, graphiques SVG, icônes
 vendor/leaflet/         Leaflet 1.9.4 (licence BSD-2)
 sw.js                   Service worker (hors ligne)

@@ -181,3 +181,31 @@ test('cleanRoute recalcule distance et messages', () => {
   assert.ok(Math.abs(res.meters - 12000) < 200);
   assert.equal(res.messages.length, 2, 'le tronçon de piste est retiré');
 });
+
+/* ---------- Boucles par points de passage ---------- */
+test('detourPoint allonge une étape de la longueur voulue', () => {
+  const a = START;
+  const b = R.destination(START, 90, 10000);
+  for (const side of [90, -90]) {
+    const p = R.detourPoint(a, b, 6000, side);
+    const added = R.haversine(a, p) + R.haversine(p, b) - R.haversine(a, b);
+    assert.ok(Math.abs(added - 6000) < 60, `ajout ${added}`);
+    // côté droit d'une étape vers l'est = sud
+    assert.equal(p[0] < START[0], side === 90);
+  }
+});
+
+test('signedArea distingue les deux sens de rotation', () => {
+  const pts = [START, R.destination(START, 0, 3000), R.destination(START, 45, 4000), R.destination(START, 90, 3000), START];
+  assert.ok(R.signedArea(pts) < 0, 'nord puis est = sens des aiguilles');
+  assert.ok(R.signedArea([...pts].reverse()) > 0);
+});
+
+test('scoreRoute en aller simple : pas de bonus tactique ni de cible de distance', () => {
+  const coords = outAndBack(0).slice(0, 101);
+  const sim = R.simulate(coords, { power: 200, mass: 81, startTime: T0, wind: WIND_N });
+  const r = { meters: sim.meters, ascent: 0, sim, overlap: 0, mix: { major: 0, medium: 0, unpaved: 0 } };
+  const s = R.scoreRoute(r, { km: null, ascent: null }, { loop: false });
+  assert.equal(s.parts.tactic, 0);
+  assert.equal(s.parts.distance, 0);
+});

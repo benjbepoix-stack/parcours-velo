@@ -206,3 +206,85 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--t
 .toast--error { border-color: var(--danger); }
 @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
+
+/* =========================================================
+   Formulaire en étapes
+   ========================================================= */
+.segmented--mode { grid-template-columns: repeat(2, 1fr); }
+.segmented--mode button { min-height: 44px; font-size: 14.5px; }
+.segmented [aria-checked="true"] { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--line-2); }
+.segmented--mode [aria-checked="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+#quietSwitch { grid-template-columns: repeat(3, 1fr); }
+
+.step { display: flex; flex-direction: column; gap: 10px; }
+.step__title { font-size: 12px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; color: var(--text-2); }
+
+/* Étapes de l'itinéraire, reliées par un trait */
+.stops { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.stop { position: relative; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto auto; align-items: center; gap: 6px; }
+.stop:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 34px; height: calc(100% - 24px); border-left: 2px dotted var(--line-2); }
+.stop__badge { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 850; background: var(--surface-2); color: var(--text-2); border: 2px solid var(--line-2); z-index: 1; }
+.stop--start .stop__badge { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.stop--end .stop__badge { background: var(--text); color: var(--bg); border-color: transparent; }
+.stop--via .stop__badge { background: var(--sky-soft); color: var(--sky); border-color: transparent; }
+.stop--return .stop__badge { border-style: dashed; }
+.stop__body { position: relative; min-width: 0; }
+.stop__input { width: 100%; min-height: 44px; padding: 0 12px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); font-size: 16px; text-overflow: ellipsis; }
+.stop__input:focus { outline: none; border-color: var(--accent); }
+.stop__input[aria-invalid="true"] { border-color: var(--danger); }
+.stop__static { display: flex; align-items: center; min-height: 44px; padding: 0 2px; color: var(--text-3); font-size: 14px; font-weight: 600; }
+.stop__btn { width: 38px; height: 44px; display: grid; place-items: center; border-radius: 10px; color: var(--text-2); }
+.stop__btn:hover { background: var(--surface); color: var(--text); }
+.stop.is-picking .stop__input { border-color: var(--sky); box-shadow: 0 0 0 3px var(--sky-soft); }
+.stop.is-picking [data-stop-action="pick"] { color: var(--sky); background: var(--sky-soft); }
+
+.suggest { position: absolute; z-index: 30; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: 4px; list-style: none; border-radius: 12px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow); max-height: 260px; overflow-y: auto; }
+.suggest li { display: flex; flex-direction: column; padding: 9px 10px; border-radius: 8px; cursor: pointer; }
+.suggest li:hover, .suggest li:focus { background: var(--surface-2); outline: none; }
+.suggest strong { font-size: 14px; }
+.suggest span { font-size: 12px; color: var(--text-3); }
+.suggest__empty { color: var(--text-3); font-size: 13px; cursor: default !important; }
+
+.add-stop { align-self: flex-start; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 12px 0 6px; margin-left: 30px; border-radius: 10px; color: var(--accent); font-weight: 750; font-size: 14px; }
+.add-stop:hover { background: var(--accent-soft); }
+
+/* Curseur de distance */
+.range-field { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
+.range-field__head { display: flex; justify-content: space-between; align-items: baseline; }
+.range-field__value { font-size: 20px; font-weight: 850; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
+
+.when { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.when__inputs { display: flex; gap: 8px; flex: 1 1 140px; }
+.when__inputs .input { flex: 1; min-width: 0; }
+.input--time { max-width: 140px; }
+
+.more { border-radius: var(--r); border: 1px solid var(--line); background: var(--surface); }
+.more summary { cursor: pointer; padding: 12px 14px; font-weight: 750; font-size: 14px; color: var(--text-2); list-style: none; display: flex; justify-content: space-between; }
+.more summary::-webkit-details-marker { display: none; }
+.more summary::after { content: "+"; font-size: 18px; line-height: 1; color: var(--text-3); }
+.more[open] summary::after { content: "–"; }
+.more__body { display: flex; flex-direction: column; gap: 12px; padding: 0 14px 14px; }
+.link { color: var(--accent); text-decoration: underline; font-weight: 700; }
+
+/* Bouton principal toujours accessible en bas du panneau */
+.cta { position: sticky; bottom: 0; z-index: 20; display: flex; flex-direction: column; gap: 8px; margin: 0 -4px; padding: 10px 4px calc(10px + env(safe-area-inset-bottom)); background: linear-gradient(to bottom, transparent, var(--panel) 30%); }
+.cta .btn { width: 100%; }
+#submitBtn.is-stale { box-shadow: 0 0 0 3px var(--accent-soft); }
+#submitBtn.is-stale #submitLabel::after { content: " · mettre à jour"; font-weight: 600; opacity: .8; }
+
+.option__sub { font-size: 11.5px; color: var(--text-3); font-weight: 600; margin-top: -4px; }
+
+/* Repères des étapes sur la carte */
+.stop-pin { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 850 12px var(--font); border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .45); cursor: grab; }
+.stop-pin--start { background: var(--accent); color: var(--accent-ink); }
+.stop-pin--via { background: var(--sky); color: #fff; }
+.stop-pin--end { background: #111827; color: #fff; }
+
+.map-banner { position: absolute; z-index: 600; left: 50%; top: 12px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line-2); box-shadow: var(--shadow); font-size: 13px; white-space: nowrap; max-width: calc(100% - 120px); }
+.map-banner span { overflow: hidden; text-overflow: ellipsis; }
+.map-popup .leaflet-popup-content-wrapper { background: var(--panel); color: var(--text); border-radius: 14px; box-shadow: var(--shadow); border: 1px solid var(--line-2); }
+.map-popup .leaflet-popup-tip { background: var(--panel); }
+.map-popup .leaflet-popup-content { margin: 8px; }
+.map-actions { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
+.map-actions .btn { width: 100%; }

@@ -1,10 +1,10 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
 import { SESSIONS, QUIET_LEVELS, compass, compassLong, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
-import { planLoops } from './core/planner.js';
+import { planRoute } from './core/planner.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
 import { brouterWebLink } from './services/routing.js';
 import { fetchWind } from './services/wind.js';
-import { geocode } from './services/geocode.js';
+import { suggest, reverse } from './services/geocode.js';
 import * as store from './services/store.js';
 import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, startsChart } from './ui/charts.js';
@@ -24,18 +24,31 @@ const fmtDur = s => {
   return m === 60 ? `${h + 1} h 00` : `${h} h ${String(m).padStart(2, '0')}`;
 };
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const uid = () => Math.random().toString(36).slice(2, 9);
+const isPoint = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lon);
+const ll = p => [p.lat, p.lon];
 
-const DEFAULT_START = { start: [47.2378, 6.0241], startName: 'Besançon' };
-const prefs = store.loadPrefs({ session: 'endurance', km: SESSIONS.endurance.km, ascent: '', quiet: 'quiet', ...DEFAULT_START });
+/* ---------- Préférences (avec migration de l'ancien format) ---------- */
+const DEFAULT_START = { lat: 47.2378, lon: 6.0241, name: 'Besançon' };
+const prefs = store.loadPrefs({ mode: 'loop', session: 'endurance', km: SESSIONS.endurance.km, ascent: '', quiet: 'quiet', start: DEFAULT_START, end: null, vias: [] });
+if (Array.isArray(prefs.start)) prefs.start = { lat: prefs.start[0], lon: prefs.start[1], name: prefs.startName || null };
+delete prefs.startName;
+if (!isPoint(prefs.start)) prefs.start = { ...DEFAULT_START };
 if (!SESSIONS[prefs.session]) prefs.session = 'endurance';
 if (!QUIET_LEVELS[prefs.quiet]) prefs.quiet = 'quiet';
-if (!Array.isArray(prefs.start) || prefs.start.length !== 2 || !prefs.start.every(Number.isFinite)) Object.assign(prefs, DEFAULT_START);
+if (!['loop', 'oneway'].includes(prefs.mode)) prefs.mode = 'loop';
+if (!isPoint(prefs.end)) prefs.end = null;
+prefs.vias = Array.isArray(prefs.vias) ? prefs.vias.filter(isPoint).map(v => ({ ...v, id: v.id || uid() })) : [];
+prefs.km = Math.min(200, Math.max(20, Number(prefs.km) || SESSIONS[prefs.session].km));
+const savePrefs = () => store.savePrefs(prefs);
 
 let profile = store.loadProfile();
 let saved = store.loadSaved();
-let result = null; // { routes, wind, windNow, startTime, target, source }
+let result = null; // { routes, wind, windNow, startTime, target, source, loop, kind, note }
 let selected = 0;
 let running = null;
+let picking = null; // étape en attente d'un appui sur la carte
+const drafts = new Map(); // id -> texte saisi non validé
 
 /* ---------- Petits composants ---------- */
 function toast(message, { error = false } = {}) {
@@ -53,9 +66,10 @@ const rider = () => ({
 });
 
 /* ---------- Thème ---------- */
+const isDark = () => (document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
 function applyTheme(theme) {
   if (theme) document.documentElement.dataset.theme = theme;
-  const dark = theme ? theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  const dark = isDark();
   $('#themeToggle').innerHTML = icon(dark ? 'sun' : 'moon', 20);
   $('#themeToggle').setAttribute('aria-label', dark ? 'Passer en thème clair' : 'Passer en thème sombre');
   mapUi.setMapTheme(dark);
@@ -68,7 +82,270 @@ function showTab(name) {
   if (name === 'saved') renderSaved();
 }
 
-/* ---------- Formulaire de sortie ---------- */
+/* =========================================================
+   FORMULAIRE
+   ========================================================= */
+
+/** Étapes dans l'ordre d'affichage. */
+function stopList() {
+  const list = [{ id: 'start', kind: 'start', point: prefs.start }];
+  prefs.vias.forEach(v => list.push({ id: v.id, kind: 'via', point: v }));
+  if (prefs.mode === 'oneway') list.push({ id: 'end', kind: 'end', point: prefs.end });
+  return list;
+}
+
+const stopTitle = (stop, index) => (stop.kind === 'start' ? 'Départ' : stop.kind === 'end' ? 'Arrivée' : `Passage ${index}`);
+const stopBadge = (stop, index) => (stop.kind === 'start' ? 'A' : stop.kind === 'end' ? 'B' : String(index));
+
+function getStop(id) {
+  if (id === 'start') return prefs.start;
+  if (id === 'end') return prefs.end;
+  return prefs.vias.find(v => v.id === id) || null;
+}
+
+function setStopPoint(id, latlng, name = null) {
+  const point = { lat: Number(latlng[0].toFixed(5)), lon: Number(latlng[1].toFixed(5)), name };
+  if (id === 'start') prefs.start = point;
+  else if (id === 'end') prefs.end = point;
+  else {
+    const v = prefs.vias.find(x => x.id === id);
+    if (!v) return;
+    Object.assign(v, point);
+  }
+  drafts.delete(id);
+  savePrefs();
+  renderStops();
+  syncMap();
+  invalidateResult();
+  // Nom lisible si le point vient de la carte.
+  if (!name) {
+    reverse(point.lat, point.lon)
+      .then(label => {
+        const current = getStop(id);
+        if (label && current && current.lat === point.lat && current.lon === point.lon && !current.name) {
+          current.name = label;
+          savePrefs();
+          renderStops();
+        }
+      })
+      .catch(() => {});
+  }
+}
+
+function addVia(point = null) {
+  const via = { id: uid(), ...(point || {}) };
+  prefs.vias.push(via);
+  savePrefs();
+  renderStops();
+  syncMap();
+  invalidateResult();
+  return via.id;
+}
+
+function removeVia(id) {
+  prefs.vias = prefs.vias.filter(v => v.id !== id);
+  drafts.delete(id);
+  savePrefs();
+  renderStops();
+  renderDistance();
+  syncMap();
+  invalidateResult();
+}
+
+function renderStops() {
+  const list = stopList();
+  let n = 0;
+  const rows = list.map(stop => {
+    const index = stop.kind === 'via' ? ++n : 0;
+    const title = stopTitle(stop, index);
+    const value = drafts.has(stop.id) ? drafts.get(stop.id) : stop.point?.name || (isPoint(stop.point) ? 'Point sur la carte' : '');
+    const placeholder = stop.kind === 'start' ? 'Départ : ville, adresse…' : stop.kind === 'end' ? 'Arrivée : ville, adresse…' : 'Passer par : village, col…';
+    return `<li class="stop stop--${stop.kind}${picking === stop.id ? ' is-picking' : ''}" data-stop="${stop.id}">
+      <span class="stop__badge" aria-hidden="true">${stopBadge(stop, index)}</span>
+      <div class="stop__body">
+        <input class="stop__input" type="text" value="${esc(value)}" placeholder="${placeholder}" aria-label="${title}" autocomplete="off" enterkeyhint="search" role="combobox" aria-autocomplete="list" aria-expanded="false" spellcheck="false">
+        <ul class="suggest" role="listbox" aria-label="Suggestions" hidden></ul>
+      </div>
+      <button type="button" class="stop__btn" data-stop-action="pick" aria-label="${title} : placer sur la carte" title="Placer sur la carte">${icon('pin', 18)}</button>
+      ${stop.kind === 'start' ? `<button type="button" class="stop__btn" data-stop-action="locate" aria-label="Partir de ma position" title="Ma position">${icon('locate', 18)}</button>` : ''}
+      ${stop.kind === 'via' ? `<button type="button" class="stop__btn" data-stop-action="remove" aria-label="Retirer ${title}" title="Retirer">${icon('close', 18)}</button>` : ''}
+    </li>`;
+  });
+  if (prefs.mode === 'loop') rows.push(`<li class="stop stop--return"><span class="stop__badge" aria-hidden="true">${icon('loop', 14)}</span><div class="stop__body"><span class="stop__static">Retour au départ</span></div></li>`);
+  $('#stops').innerHTML = rows.join('');
+  $('#addVia').querySelector('span:last-child').textContent = prefs.vias.length ? 'Ajouter un autre passage' : 'Ajouter un point de passage';
+}
+
+function syncMap() {
+  let n = 0;
+  const stops = stopList()
+    .filter(s => isPoint(s.point))
+    .map(s => {
+      const index = s.kind === 'via' ? ++n : 0;
+      return { id: s.id, kind: s.kind, label: stopBadge(s, index), title: stopTitle(s, index), latlng: ll(s.point) };
+    });
+  mapUi.setStops(stops);
+}
+
+/* ---------- Suggestions de lieux ---------- */
+let suggestTimer = null;
+let suggestAbort = null;
+
+function closeSuggest(li) {
+  const box = li?.querySelector('.suggest');
+  if (!box) return;
+  box.hidden = true;
+  box.innerHTML = '';
+  li.querySelector('.stop__input').setAttribute('aria-expanded', 'false');
+}
+
+function onStopInput(e) {
+  const input = e.target.closest('.stop__input');
+  if (!input) return;
+  const li = input.closest('[data-stop]');
+  const id = li.dataset.stop;
+  const q = input.value.trim();
+  drafts.set(id, input.value);
+  clearTimeout(suggestTimer);
+  suggestAbort?.abort();
+  if (q.length < 3) return closeSuggest(li);
+  suggestTimer = setTimeout(async () => {
+    suggestAbort = new AbortController();
+    try {
+      const near = isPoint(prefs.start) ? ll(prefs.start) : null;
+      const hits = await suggest(q, near, suggestAbort.signal);
+      const box = li.querySelector('.suggest');
+      if (!box || !li.isConnected) return;
+      box.innerHTML = hits.length
+        ? hits.map((h, i) => `<li role="option" id="sg-${id}-${i}" data-lat="${h.lat}" data-lon="${h.lon}" data-name="${esc(h.name)}" tabindex="-1"><strong>${esc(h.name)}</strong>${h.detail ? `<span>${esc(h.detail)}</span>` : ''}</li>`).join('')
+        : '<li class="suggest__empty">Aucun lieu trouvé</li>';
+      box.hidden = false;
+      input.setAttribute('aria-expanded', 'true');
+    } catch (error) {
+      if (error.name !== 'AbortError') closeSuggest(li);
+    }
+  }, 280);
+}
+
+function chooseSuggestion(option) {
+  const li = option.closest('[data-stop]');
+  if (!option.dataset.lat) return;
+  setStopPoint(li.dataset.stop, [Number(option.dataset.lat), Number(option.dataset.lon)], option.dataset.name);
+  mapUi.panTo([Number(option.dataset.lat), Number(option.dataset.lon)]);
+}
+
+function onStopKeydown(e) {
+  const input = e.target.closest('.stop__input');
+  if (!input) return;
+  const li = input.closest('[data-stop]');
+  const box = li.querySelector('.suggest');
+  const options = [...box.querySelectorAll('[data-lat]')];
+  if (e.key === 'ArrowDown' && options.length) {
+    e.preventDefault();
+    options[0].focus();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (options.length) chooseSuggestion(options[0]);
+  } else if (e.key === 'Escape') closeSuggest(li);
+}
+
+function onSuggestKeydown(e) {
+  const option = e.target.closest('.suggest [data-lat]');
+  if (!option) return;
+  if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    chooseSuggestion(option);
+  } else if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    option.nextElementSibling?.focus();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    (option.previousElementSibling || option.closest('[data-stop]').querySelector('.stop__input')).focus();
+  }
+}
+
+/* ---------- Placement sur la carte ---------- */
+function startPicking(id) {
+  picking = id;
+  const stop = stopList().find(s => s.id === id);
+  let n = 0;
+  const index = stop?.kind === 'via' ? prefs.vias.findIndex(v => v.id === id) + 1 : n;
+  $('#mapBannerText').innerHTML = `Touchez la carte pour placer : <strong>${esc(stop ? stopTitle(stop, index) : 'le point')}</strong>`;
+  $('#mapBanner').hidden = false;
+  renderStops();
+  if (matchMedia('(max-width: 959px)').matches) $('.map-wrap').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function stopPicking() {
+  if (!picking) return;
+  const id = picking;
+  picking = null;
+  $('#mapBanner').hidden = true;
+  // Un passage ajouté puis abandonné sans position est retiré.
+  const v = prefs.vias.find(x => x.id === id);
+  if (v && !isPoint(v)) removeVia(id);
+  else renderStops();
+}
+
+function onMapTap(latlng) {
+  if (picking) {
+    const id = picking;
+    picking = null;
+    $('#mapBanner').hidden = true;
+    setStopPoint(id, latlng);
+    return;
+  }
+  const actions = [{ label: 'Départ ici', run: () => setStopPoint('start', latlng) }];
+  actions.push({ label: 'Ajouter un passage', primary: true, run: () => setStopPoint(addVia(), latlng) });
+  if (prefs.mode === 'oneway') actions.push({ label: 'Arrivée ici', run: () => setStopPoint('end', latlng) });
+  mapUi.showActions(latlng, actions);
+}
+
+function locate() {
+  if (!navigator.geolocation) return toast('Géolocalisation indisponible sur cet appareil.', { error: true });
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      setStopPoint('start', [pos.coords.latitude, pos.coords.longitude], 'Ma position');
+      mapUi.panTo(ll(prefs.start));
+    },
+    () => toast('Position refusée ou introuvable.', { error: true }),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function onStopsClick(e) {
+  const option = e.target.closest('.suggest [data-lat]');
+  if (option) return chooseSuggestion(option);
+  const btn = e.target.closest('[data-stop-action]');
+  if (!btn) return;
+  const id = btn.closest('[data-stop]').dataset.stop;
+  const action = btn.dataset.stopAction;
+  if (action === 'remove') removeVia(id);
+  if (action === 'locate') locate();
+  if (action === 'pick') (picking === id ? stopPicking() : startPicking(id));
+}
+
+/* ---------- Mode, séance, distance, jour, routes ---------- */
+function renderMode() {
+  document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === prefs.mode)));
+  $('#submitLabel').textContent = prefs.mode === 'loop' ? 'Trouver mes boucles' : 'Trouver mon itinéraire';
+  renderDistance();
+}
+
+function setMode(mode) {
+  if (prefs.mode === mode) return;
+  prefs.mode = mode;
+  savePrefs();
+  renderMode();
+  renderStops();
+  syncMap();
+  invalidateResult();
+  if (mode === 'oneway' && !isPoint(prefs.end)) {
+    const input = $('[data-stop="end"] .stop__input');
+    input?.focus();
+  }
+}
+
 function renderSessions() {
   $('#sessionChips').innerHTML = Object.entries(SESSIONS)
     .map(([k, s]) => `<button type="button" class="chip" role="radio" data-session="${k}" aria-checked="${k === prefs.session}">${esc(s.label)}</button>`)
@@ -76,46 +353,106 @@ function renderSessions() {
   $('#sessionHint').textContent = SESSIONS[prefs.session].hint;
 }
 
+/** Curseur : 15 = « au plus court » quand il y a des passages. */
+const SHORTEST = 15;
+function renderDistance() {
+  const field = $('#distanceField');
+  field.hidden = prefs.mode === 'oneway';
+  const slider = $('#f-km');
+  const withVias = prefs.vias.some(isPoint);
+  slider.min = withVias ? SHORTEST : 20;
+  if (!withVias && prefs.km < 20) prefs.km = SESSIONS[prefs.session].km;
+  slider.value = prefs.km;
+  const shortest = withVias && prefs.km <= SHORTEST;
+  $('#kmOut').textContent = shortest ? 'Au plus court' : `${prefs.km} km`;
+  slider.setAttribute('aria-valuetext', shortest ? 'Au plus court par vos points' : `${prefs.km} kilomètres`);
+  $('#distanceHint').textContent = withVias
+    ? shortest
+      ? 'La boucle passe par vos points par le chemin le plus direct.'
+      : 'La boucle passe par vos points et ajoute un détour si besoin pour atteindre la distance.'
+    : '';
+  $('#distanceHint').hidden = !withVias;
+  renderRider();
+}
+
 function renderRider() {
   const s = SESSIONS[prefs.session];
-  const km = num($('#f-km').value) || prefs.km;
-  const auto = s.climb === null ? null : Math.round(s.climb * km);
-  $('#f-ascent').placeholder = auto === null ? 'Libre' : `Auto · ${auto}`;
+  const auto = s.climb === null || prefs.mode === 'oneway' ? null : Math.round(s.climb * prefs.km);
+  $('#f-ascent').placeholder = auto === null ? 'Libre' : `Auto · ${auto} m`;
   $('#riderNote').innerHTML = `Allure visée : <strong>${Math.round(rider().power)} W</strong> (${Math.round(s.ftp * 100)} % de votre FTP de ${profile.ftp} W)${
-    profile.custom ? '' : ' — <button type="button" class="link" data-go="profile" style="text-decoration:underline;color:var(--accent)">renseignez votre profil</button>'
+    profile.custom ? '' : ' — <button type="button" class="link" data-go="profile">renseignez votre profil</button>'
   }.`;
 }
 
-function renderStart() {
-  const [lat, lon] = prefs.start;
-  $('#startLabel').textContent = `${prefs.startName || `${lat.toFixed(4)}, ${lon.toFixed(4)}`} · touchez la carte ou déplacez le point pour changer.`;
+function renderQuiet() {
+  $('#quietSwitch').innerHTML = Object.entries(QUIET_LEVELS)
+    .map(([k, q]) => `<button type="button" role="radio" data-quiet="${k}" aria-checked="${k === prefs.quiet}">${esc(q.short || q.label)}</button>`)
+    .join('');
 }
 
-function setStart(latlng, name = null, { pan = false } = {}) {
-  prefs.start = [Number(latlng[0].toFixed(5)), Number(latlng[1].toFixed(5))];
-  prefs.startName = name;
-  store.savePrefs(prefs);
-  renderStart();
-  mapUi.setStart(prefs.start, { pan });
+function setDay(day) {
+  const today = new Date();
+  document.querySelectorAll('[data-day]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.day === day)));
+  const date = $('#f-date');
+  date.hidden = day !== 'other';
+  if (day === 'today') date.value = dateKey(today);
+  if (day === 'tomorrow') date.value = dateKey(addDays(today, 1));
+  if (day === 'other' && !date.value) date.value = dateKey(addDays(today, 2));
 }
 
+const getStartTime = () => combine($('#f-date').value, $('#f-time').value);
+
+function initWhen() {
+  const next = new Date();
+  next.setMinutes(0, 0, 0);
+  next.setHours(next.getHours() + 1);
+  let day = 'today';
+  if (next.getHours() > 19 || next.getHours() < 6) {
+    if (next.getHours() > 19) day = 'tomorrow';
+    next.setHours(9);
+  }
+  const date = $('#f-date');
+  date.min = dateKey(new Date());
+  date.max = dateKey(addDays(new Date(), 15));
+  setDay(day);
+  $('#f-time').value = hhmm(next);
+}
+
+/** Les réglages ont changé : le résultat affiché n'est plus à jour (sauf l'heure, recalculée seule). */
+function invalidateResult() {
+  if (!result || result.source !== 'plan') return;
+  $('#submitBtn').classList.add('is-stale');
+}
+
+/* ---------- Lecture et calcul ---------- */
 function readForm() {
-  const km = num($('#f-km').value);
-  const ascentRaw = num($('#f-ascent').value);
-  const startTime = combine($('#f-date').value, $('#f-time').value);
-  const fail = (sel, message) => {
-    $(sel).setAttribute('aria-invalid', 'true');
-    $(sel).focus();
+  const fail = (el, message) => {
+    if (el) {
+      el.setAttribute('aria-invalid', 'true');
+      el.focus();
+    }
     toast(message, { error: true });
     return null;
   };
   document.querySelectorAll('[aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
-  if (!km || km < 10 || km > 300) return fail('#f-km', 'Indiquez une distance entre 10 et 300 km.');
-  if (ascentRaw !== null && (ascentRaw < 0 || ascentRaw > 6000)) return fail('#f-ascent', 'Indiquez un dénivelé entre 0 et 6000 m, ou laissez vide.');
-  if (!startTime) return fail('#f-date', 'Choisissez le jour et l’heure de départ.');
-  if (startTime > addDays(new Date(), 15)) return fail('#f-date', 'Les prévisions de vent couvrent les 15 prochains jours.');
+  if (!isPoint(prefs.start)) return fail($('[data-stop="start"] .stop__input'), 'Choisissez un point de départ.');
+  if (prefs.mode === 'oneway' && !isPoint(prefs.end)) return fail($('[data-stop="end"] .stop__input'), 'Choisissez une arrivée.');
+  const pending = prefs.vias.find(v => !isPoint(v));
+  if (pending) return fail($(`[data-stop="${pending.id}"] .stop__input`), 'Choisissez un lieu dans la liste pour ce passage, ou retirez-le.');
+  const ascentRaw = num($('#f-ascent').value);
+  if (ascentRaw !== null && (ascentRaw < 0 || ascentRaw > 6000)) {
+    $('.more').open = true;
+    return fail($('#f-ascent'), 'Indiquez un dénivelé entre 0 et 6000 m, ou laissez vide.');
+  }
+  const startTime = getStartTime();
+  if (!startTime) return fail($('#f-time'), 'Choisissez le jour et l’heure de départ.');
+  if (startTime > addDays(new Date(), 15)) return fail($('#f-date'), 'Les prévisions de vent couvrent les 15 prochains jours.');
+  const vias = prefs.vias.map(ll);
+  const shortest = vias.length && prefs.km <= SHORTEST;
+  const km = prefs.mode === 'oneway' || shortest ? null : prefs.km;
   const s = SESSIONS[prefs.session];
-  return { km, ascent: ascentRaw ?? (s.climb === null ? null : Math.round(s.climb * km)), startTime, quiet: $('#f-quiet').value };
+  const ascent = ascentRaw ?? (s.climb === null || !km ? null : Math.round(s.climb * km));
+  return { mode: prefs.mode, start: ll(prefs.start), end: prefs.end ? ll(prefs.end) : null, vias, km, ascent, startTime, quiet: prefs.quiet };
 }
 
 function setProgress(done, total, label) {
@@ -127,21 +464,26 @@ function setProgress(done, total, label) {
 
 async function generate(event) {
   event?.preventDefault();
+  stopPicking();
   const input = readForm();
   if (!input) return;
-  Object.assign(prefs, { km: input.km, ascent: $('#f-ascent').value.trim(), quiet: input.quiet });
-  store.savePrefs(prefs);
+  prefs.ascent = $('#f-ascent').value.trim();
+  savePrefs();
   running?.abort();
   const controller = new AbortController();
   running = controller;
   $('#submitBtn').disabled = true;
   setProgress(0, 1, 'Préparation…');
   try {
-    const planned = await planLoops({ start: prefs.start, km: input.km, ascent: input.ascent, quiet: input.quiet, startTime: input.startTime, ...rider(), onProgress: setProgress, signal: controller.signal });
+    const planned = await planRoute({ ...input, ...rider(), onProgress: setProgress, signal: controller.signal });
+    if (!planned.routes.length) throw new Error('Aucun itinéraire trouvé.');
     planned.routes.forEach(r => (r.quiet = input.quiet));
-    result = { ...planned, startTime: input.startTime, target: { km: input.km, ascent: input.ascent }, source: 'plan' };
+    const kind = input.mode === 'oneway' ? 'oneway' : input.vias.length ? 'via' : 'free';
+    result = { ...planned, startTime: input.startTime, source: 'plan', kind, mode: input.mode };
     selected = 0;
+    $('#submitBtn').classList.remove('is-stale');
     renderAll();
+    if (planned.note) toast(planned.note);
     if (matchMedia('(max-width: 959px)').matches) $('.map-wrap').scrollIntoView({ behavior: 'smooth' });
   } catch (error) {
     if (error.name !== 'AbortError') toast(friendlyError(error), { error: true });
@@ -155,7 +497,7 @@ async function generate(event) {
 function friendlyError(error) {
   const m = String(error?.message || '');
   if (error?.name === 'TypeError' || /fetch|network|réseau/i.test(m)) return 'Pas de connexion aux services d’itinéraire ou de météo. Vérifiez le réseau et réessayez.';
-  if (/not mapped|position/i.test(m)) return 'Aucune route trouvée autour de ce départ. Déplacez le point de départ sur une route.';
+  if (/not mapped|position/i.test(m)) return 'Un de vos points est trop loin d’une route. Déplacez-le sur une route et réessayez.';
   return m || 'Calcul impossible pour le moment.';
 }
 
@@ -163,20 +505,22 @@ function friendlyError(error) {
 function resimulate(routes, startTime, wind) {
   const t0 = startTime.getTime();
   const target = result?.target || { km: routes[0].meters / 1000, ascent: null };
+  const loop = result ? result.loop !== false : true;
   routes.forEach(r => {
     r.sim = simulate(r.coords, { ...rider(), startTime: t0, wind });
     r.shares = windShares(r.sim);
     r.overlap ??= overlapRatio(r.coords);
-    r.score = scoreRoute(r, target);
+    r.score = scoreRoute(r, target, { loop });
   });
 }
 
 async function refreshTime() {
   if (!result) return;
-  const startTime = combine($('#f-date').value, $('#f-time').value);
+  const startTime = getStartTime();
   if (!startTime || startTime > addDays(new Date(), 15)) return;
   try {
-    const wind = await fetchWind(prefs.start[0], prefs.start[1], startTime);
+    const first = result.routes[0].coords[0];
+    const wind = await fetchWind(first[0], first[1], startTime);
     const current = result.routes[selected];
     const t0 = startTime.getTime();
     result.wind = wind;
@@ -217,7 +561,11 @@ function renderForecast() {
   const t1 = t0 + (r?.sim?.seconds || 3 * 3600) * 1000;
   const day = dateKey(result.startTime);
   const hours = result.wind.filter(h => dateKey(h.t) === day && new Date(h.t).getHours() >= 6 && new Date(h.t).getHours() <= 21);
-  const advice = w.speed < 8 ? 'Vent faible : toutes les directions se valent, place au relief.' : `Partez vers le ${compassLong(w.dir)}, face au vent : le retour se fera vent dans le dos.`;
+  let advice;
+  if (w.speed < 8) advice = 'Vent faible : il ne pèsera pas sur la sortie.';
+  else if (result.loop === false && r) advice = r.shares.head > 0.45 ? `Vent de face sur ${pct(r.shares.head)} du trajet : prévoyez de la marge.` : r.shares.tail > 0.45 ? `Vent favorable sur ${pct(r.shares.tail)} du trajet.` : 'Vent surtout de côté sur ce trajet.';
+  else if (result.kind === 'via') advice = 'Le sens de la boucle a été choisi pour finir avec le vent le plus favorable.';
+  else advice = `Partez vers le ${compassLong(w.dir)}, face au vent : le retour se fera vent dans le dos.`;
   host.hidden = false;
   host.innerHTML = `
     <div class="forecast__head">
@@ -246,7 +594,8 @@ function renderOptions() {
   $('#options').innerHTML = result.routes
     .map(
       (r, i) => `<button type="button" class="option" role="option" data-route="${i}" aria-selected="${i === selected}">
-        <span class="option__top"><span class="option__name">${esc(routeName(r))}</span>${i === 0 && result.source === 'plan' ? '<span class="badge">Recommandée</span>' : ''}</span>
+        <span class="option__top"><span class="option__name">${esc(routeName(r))}</span>${i === 0 && result.source === 'plan' && result.routes.length > 1 ? '<span class="badge">Recommandée</span>' : ''}</span>
+        ${r.subtitle ? `<span class="option__sub">${esc(r.subtitle)}</span>` : ''}
         <span class="option__stats"><span>${fmtKm(r.meters)}</span><span>${Math.round(r.ascent)} m D+</span><span>${fmtDur(r.sim.seconds)}</span></span>
         <span class="bar" aria-hidden="true"><span style="--c:var(--tail);flex:${r.shares.tail}"></span><span style="--c:var(--cross);flex:${r.shares.cross}"></span><span style="--c:var(--head);flex:${r.shares.head}"></span></span>
       </button>`
@@ -258,12 +607,13 @@ function warningsFor(r) {
   const out = [];
   const t = result.target;
   const mix = r.mix || {};
-  if (result.source === 'plan' && Math.abs(r.meters / 1000 - t.km) / t.km > 0.12) out.push(`Distance éloignée de l’objectif (${t.km} km) : le réseau routier autour du départ limite les possibilités.`);
-  if (result.source === 'plan' && t.ascent !== null && Math.abs(r.ascent - t.ascent) > Math.max(250, t.ascent * 0.35))
+  if (result.source === 'plan' && result.kind !== 'oneway' && t.km && Math.abs(r.meters / 1000 - t.km) / t.km > 0.12) out.push(`Distance éloignée de l’objectif (${t.km} km) : le réseau routier autour du départ limite les possibilités.`);
+  if (result.source === 'plan' && result.kind !== 'oneway' && t.ascent !== null && Math.abs(r.ascent - t.ascent) > Math.max(250, t.ascent * 0.35))
     out.push(r.ascent < t.ascent ? `Moins de dénivelé que prévu (${t.ascent} m visés) : essayez un départ plus proche du relief.` : `Plus de dénivelé que prévu (${t.ascent} m visés) : réduisez la distance ou choisissez une autre boucle.`);
   if (r.roadProfile === false) out.push('Profil vélo de route indisponible sur le serveur : itinéraire calculé avec un profil BRouter standard, vérifiez les portions non asphaltées.');
-  if (mix.major > 0.08) out.push(`${pct(mix.major)} sur routes principales : prudence, ou choisissez « Très peu de trafic ».`);
+  if (mix.major > 0.08) out.push(`${pct(mix.major)} sur routes principales : choisissez « Très calme » pour les éviter.`);
   if (mix.unpaved > 0.03) out.push(`${pct(mix.unpaved)} de revêtement non asphalté selon OpenStreetMap.`);
+  if (result.note) out.push(result.note);
   if (r.overlap > 0.15) out.push(`${pct(r.overlap)} de la boucle repasse par les mêmes routes.`);
   const end = result.startTime.getTime() + r.sim.seconds * 1000;
   const during = result.wind.filter(h => h.t >= result.startTime.getTime() - 1800000 && h.t <= end);
@@ -306,7 +656,7 @@ function renderDetail() {
 
   $('#detail').innerHTML = `
     <h3 class="detail__title">${esc(routeName(r))}</h3>
-    <p class="detail__sub">${esc(SESSIONS[prefs.session].label)} · départ ${hhmm(result.startTime)} · retour vers ${hLabel(back)}</p>
+    <p class="detail__sub">${esc(SESSIONS[prefs.session].label)} · départ ${hhmm(result.startTime)} · ${result.loop === false ? 'arrivée' : 'retour'} vers ${hLabel(back)}${r.subtitle ? ` · ${esc(r.subtitle.toLowerCase())}` : ''}</p>
     <div class="stats">
       <div class="stat"><strong>${fmtKm(r.meters)}</strong><span>Distance</span></div>
       <div class="stat"><strong>${Math.round(r.ascent)} m</strong><span>Dénivelé positif</span></div>
@@ -318,7 +668,7 @@ function renderDetail() {
       <h4 class="block__title">Vent sur le parcours</h4>
       <div class="bar"><span style="--c:var(--tail);flex:${r.shares.tail}"></span><span style="--c:var(--cross);flex:${r.shares.cross}"></span><span style="--c:var(--head);flex:${r.shares.head}"></span></div>
       <div class="legend"><span style="--c:var(--tail)">Dos ${pct(r.shares.tail)}</span><span style="--c:var(--cross)">Côté ${pct(r.shares.cross)}</span><span style="--c:var(--head)">Face ${pct(r.shares.head)}</span></div>
-      <p class="text">Aller : <strong>${fh(first)}</strong> · Retour : <strong>${fh(second)}</strong>. ${
+      <p class="text">${result.loop === false ? '1re moitié' : 'Aller'} : <strong>${fh(first)}</strong> · ${result.loop === false ? '2de moitié' : 'Retour'} : <strong>${fh(second)}</strong>. ${
         Math.abs(lost) >= 60 ? `Le vent ${lost > 0 ? 'coûte' : 'fait gagner'} environ <strong>${Math.round(Math.abs(lost) / 60)} min</strong>.` : 'Effet du vent négligeable.'
       }</p>
     </section>
@@ -330,7 +680,7 @@ function renderDetail() {
       ${startsChart(slots, result.startTime.getTime(), width)}
       <p class="text">${
         gain >= 3
-          ? `En partant à <strong>${new Date(best.t).getHours()} h</strong>, cette boucle prend <strong>${gain} min de moins</strong> grâce au vent. Touchez une barre pour changer l’heure.`
+          ? `En partant à <strong>${new Date(best.t).getHours()} h</strong>, ce parcours prend <strong>${gain} min de moins</strong> grâce au vent. Touchez une barre pour changer l’heure.`
           : 'Votre heure de départ est déjà parmi les plus favorables. Touchez une barre pour comparer.'
       }</p>
     </section>`
@@ -394,8 +744,10 @@ function saveRoute(r) {
     id,
     name: `${routeName(r)} · ${Math.round(r.meters / 1000)} km`,
     savedAt: Date.now(),
-    start: prefs.start,
-    startName: prefs.startName,
+    start: ll(prefs.start),
+    startName: prefs.start.name,
+    mode: result.mode || 'loop',
+    loop: result.loop !== false,
     session: prefs.session,
     heading: r.heading,
     meters: Math.round(r.meters),
@@ -431,7 +783,7 @@ function renderSaved() {
     .map(
       s => `<article class="saved" data-id="${esc(s.id)}">
         <div><div class="saved__name">${esc(s.name)}</div>
-        <div class="saved__meta">${fmtKm(s.meters)} · ${s.ascent} m D+ · départ ${esc(s.startName || 'point personnalisé')} · ${new Date(s.savedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div></div>
+        <div class="saved__meta">${s.loop === false ? 'Aller simple' : 'Boucle'} · ${fmtKm(s.meters)} · ${s.ascent} m D+ · départ ${esc(s.startName || 'point personnalisé')} · ${new Date(s.savedAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}</div></div>
         <div class="saved__actions">
           <button type="button" class="btn btn--primary btn--sm" data-saved="open">${icon('map', 16)}<span>Ouvrir avec le vent</span></button>
           <button type="button" class="btn btn--soft btn--sm" data-saved="gpx">${icon('download', 16)}<span>GPX</span></button>
@@ -444,7 +796,7 @@ function renderSaved() {
 }
 
 async function openSaved(item) {
-  const startTime = combine($('#f-date').value, $('#f-time').value) || new Date();
+  const startTime = getStartTime() || new Date();
   try {
     const wind = await fetchWind(item.start[0], item.start[1], startTime);
     const t0 = startTime.getTime();
@@ -452,8 +804,7 @@ async function openSaved(item) {
     prefs.session = SESSIONS[item.session] ? item.session : prefs.session;
     renderSessions();
     renderRider();
-    setStart(item.start, item.startName);
-    result = { routes: [r], wind, windNow: wind.reduce((b, h) => (Math.abs(h.t - t0) < Math.abs(b.t - t0) ? h : b), wind[0]), startTime, target: { km: item.meters / 1000, ascent: null }, source: 'saved' };
+    result = { routes: [r], wind, windNow: wind.reduce((b, h) => (Math.abs(h.t - t0) < Math.abs(b.t - t0) ? h : b), wind[0]), startTime, target: { km: item.meters / 1000, ascent: null }, source: 'saved', loop: item.loop !== false, kind: item.loop === false ? 'oneway' : 'free' };
     resimulate(result.routes, startTime, wind);
     selected = 0;
     showTab('ride');
@@ -543,38 +894,31 @@ function init() {
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => applyTheme(store.loadTheme()));
   document.querySelectorAll('[data-icon]').forEach(el => el.insertAdjacentHTML('afterbegin', icon(el.dataset.icon)));
 
-  $('#f-quiet').innerHTML = Object.entries(QUIET_LEVELS)
-    .map(([k, q]) => `<option value="${k}"${k === prefs.quiet ? ' selected' : ''}>${esc(q.label)}</option>`)
-    .join('');
-  $('#f-km').value = prefs.km;
   $('#f-ascent').value = prefs.ascent;
-  const next = new Date();
-  next.setMinutes(0, 0, 0);
-  next.setHours(next.getHours() + 1);
-  if (next.getHours() > 20 || next.getHours() < 6) {
-    if (next.getHours() > 20) next.setDate(next.getDate() + 1);
-    next.setHours(9);
-  }
-  $('#f-date').value = dateKey(next);
-  $('#f-date').min = dateKey(new Date());
-  $('#f-date').max = dateKey(addDays(new Date(), 15));
-  $('#f-time').value = hhmm(next);
-
+  initWhen();
+  renderMode();
+  renderStops();
   renderSessions();
-  renderRider();
-  renderStart();
+  renderQuiet();
+  renderDistance();
   fillProfile();
   renderSavedCount();
 
-  const isDark = () => (document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
-  const mapReady = () => mapUi.initMap($('#map'), { start: prefs.start, dark: isDark(), onStart: latlng => setStart(latlng) });
+  const mapReady = () => {
+    mapUi.initMap($('#map'), {
+      center: ll(prefs.start),
+      dark: isDark(),
+      onTap: onMapTap,
+      onMoveStop: (id, latlng) => setStopPoint(id, latlng)
+    });
+    syncMap();
+  };
   if (window.L) mapReady();
   else window.addEventListener('load', mapReady, { once: true });
 
-  // Événements
+  // En-tête et onglets
   $('#themeToggle').addEventListener('click', () => {
-    const dark = document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
-    const theme = dark ? 'light' : 'dark';
+    const theme = isDark() ? 'light' : 'dark';
     store.saveTheme(theme);
     applyTheme(theme);
   });
@@ -582,47 +926,69 @@ function init() {
   document.addEventListener('click', e => {
     const go = e.target.closest('[data-go]');
     if (go) showTab(go.dataset.go);
+    // Fermer les suggestions en touchant ailleurs
+    if (!e.target.closest('.stop')) document.querySelectorAll('.stop').forEach(li => closeSuggest(li));
   });
+
+  // Formulaire
+  $('#modeSwitch').addEventListener('click', e => {
+    const b = e.target.closest('[data-mode]');
+    if (b) setMode(b.dataset.mode);
+  });
+  $('#stops').addEventListener('input', onStopInput);
+  $('#stops').addEventListener('keydown', onStopKeydown);
+  $('#stops').addEventListener('keydown', onSuggestKeydown);
+  $('#stops').addEventListener('click', onStopsClick);
+  $('#stops').addEventListener('focusin', e => {
+    const input = e.target.closest('.stop__input');
+    if (input && !drafts.has(input.closest('[data-stop]').dataset.stop)) input.select();
+  });
+  $('#addVia').addEventListener('click', () => {
+    const id = addVia();
+    renderDistance();
+    $(`[data-stop="${id}"] .stop__input`)?.focus();
+  });
+  $('#mapBannerCancel').addEventListener('click', stopPicking);
   $('#sessionChips').addEventListener('click', e => {
     const chip = e.target.closest('[data-session]');
     if (!chip) return;
     const previous = SESSIONS[prefs.session];
     prefs.session = chip.dataset.session;
-    if (num($('#f-km').value) === previous.km) $('#f-km').value = SESSIONS[prefs.session].km;
-    store.savePrefs(prefs);
+    // La distance suit la séance tant qu'elle n'a pas été personnalisée.
+    if (prefs.km === previous.km) prefs.km = SESSIONS[prefs.session].km;
+    savePrefs();
     renderSessions();
-    renderRider();
+    renderDistance();
+    invalidateResult();
   });
-  $('#f-km').addEventListener('input', renderRider);
+  $('#f-km').addEventListener('input', e => {
+    prefs.km = Number(e.target.value);
+    renderDistance();
+  });
+  $('#f-km').addEventListener('change', () => {
+    savePrefs();
+    invalidateResult();
+  });
+  $('#quietSwitch').addEventListener('click', e => {
+    const b = e.target.closest('[data-quiet]');
+    if (!b) return;
+    prefs.quiet = b.dataset.quiet;
+    savePrefs();
+    renderQuiet();
+    invalidateResult();
+  });
+  $('#dayChips').addEventListener('click', e => {
+    const b = e.target.closest('[data-day]');
+    if (!b) return;
+    setDay(b.dataset.day);
+    if (b.dataset.day === 'other') $('#f-date').focus();
+    refreshTime();
+  });
   $('#rideForm').addEventListener('submit', generate);
   $('#f-date').addEventListener('change', refreshTime);
   $('#f-time').addEventListener('change', refreshTime);
-  const search = async () => {
-    const q = $('#f-place').value.trim();
-    if (!q) return;
-    try {
-      const hit = await geocode(q);
-      if (!hit) return toast('Lieu introuvable. Essayez avec le nom de la commune.', { error: true });
-      setStart([hit.lat, hit.lon], hit.name, { pan: true });
-    } catch {
-      toast('Recherche de lieu indisponible pour le moment.', { error: true });
-    }
-  };
-  $('#placeSearch').addEventListener('click', search);
-  $('#f-place').addEventListener('keydown', e => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      search();
-    }
-  });
-  $('#locateMe').addEventListener('click', () => {
-    if (!navigator.geolocation) return toast('Géolocalisation indisponible sur cet appareil.', { error: true });
-    navigator.geolocation.getCurrentPosition(
-      pos => setStart([pos.coords.latitude, pos.coords.longitude], 'Ma position', { pan: true }),
-      () => toast('Position refusée ou introuvable.', { error: true }),
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  });
+
+  // Résultats
   $('#options').addEventListener('click', e => {
     const opt = e.target.closest('[data-route]');
     if (!opt) return;
@@ -654,11 +1020,12 @@ function init() {
 }
 
 function pickStart(t) {
-  $('#f-time').value = hhmm(new Date(t));
+  const d = new Date(t);
+  $('#f-time').value = hhmm(d);
   refreshTime();
 }
 
 init();
 
 // Utilisé par les tests de bout en bout.
-window.__pv = { get result() { return result; }, windAt };
+window.__pv = { get result() { return result; }, get prefs() { return prefs; }, windAt };
