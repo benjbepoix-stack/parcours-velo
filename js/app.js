@@ -887,6 +887,15 @@ function fillProfile() {
   f.cda.value = [0.4, 0.36, 0.32].reduce((a, b) => (Math.abs(b - profile.cda) < Math.abs(a - profile.cda) ? b : a)).toFixed(2);
 }
 
+/** Clin d'œil : au-dessus de 82 kg, le cycliste passe dans la catégorie « Gros ». */
+function renderWeightCategory() {
+  const w = num($('#p-weight').value);
+  const el = $('#weightCat');
+  const gros = w !== null && w > 82;
+  el.hidden = !gros;
+  if (gros) el.innerHTML = '<span class="weight-cat__badge">Catégorie : Gros</span> Imbattable en descente, un peu moins dans les cols.';
+}
+
 /** Enregistre le profil dès qu'un champ valide change (pas de bouton à penser à toucher). */
 function saveProfileFromForm() {
   const f = $('#profileForm');
@@ -1024,6 +1033,7 @@ function init() {
   renderQuiet();
   renderDistance();
   fillProfile();
+  renderWeightCategory();
   renderSavedCount();
 
   const mapReady = () => {
@@ -1159,6 +1169,7 @@ function init() {
     saveProfileFromForm();
   });
   profileForm.addEventListener('input', () => {
+    renderWeightCategory();
     clearTimeout(profileTimer);
     profileTimer = setTimeout(saveProfileFromForm, 500);
   });
