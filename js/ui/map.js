@@ -5,6 +5,8 @@ import { windClass } from './charts.js';
 let L = null;
 let map = null;
 let stopLayer = null;
+let colLayer = null;
+const colMarkers = new Map();
 let stopMarkers = new Map();
 let callbacks = {};
 let layer = null;
@@ -52,6 +54,7 @@ export function initMap(host, { center, dark, onTap, onMoveStop }) {
   map.on('click', e => callbacks.onTap?.([e.latlng.lat, e.latlng.lng]));
   layer = L.layerGroup().addTo(map);
   stopLayer = L.layerGroup().addTo(map);
+  colLayer = L.layerGroup().addTo(map);
   new ResizeObserver(() => map.invalidateSize()).observe(host);
   return true;
 }
@@ -178,4 +181,53 @@ export function drawRoute(r, { fit = true } = {}) {
 export function clearRoutes() {
   lastDraw = null;
   layer?.clearLayers();
+}
+
+/* ---------- Cols ---------- */
+const fr = (n, d = 1) => Number(n).toFixed(d).replace('.', ',');
+const escHtml = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+/**
+ * Repères des cols (triangle de sommet ; coché = gravi).
+ * Les versants d'un même col partagent le sommet : un seul repère par position.
+ */
+export function setCols(cols, done, { onSelect, fit = false } = {}) {
+  if (!map) return;
+  colLayer.clearLayers();
+  colMarkers.clear();
+  const seen = new Map();
+  for (const c of cols) {
+    const key = `${c.lat.toFixed(3)},${c.lon.toFixed(3)}`;
+    if (seen.has(key)) {
+      colMarkers.set(c.id, seen.get(key));
+      continue;
+    }
+    const isDone = cols.some(o => `${o.lat.toFixed(3)},${o.lon.toFixed(3)}` === key && done[o.id]);
+    const marker = L.marker([c.lat, c.lon], {
+      title: c.name,
+      icon: L.divIcon({ className: '', html: `<div class="col-pin${isDone ? ' is-done' : ''}" aria-hidden="true"><span>${isDone ? '✓' : c.cat}</span></div>`, iconSize: [30, 30], iconAnchor: [15, 26] })
+    }).addTo(colLayer);
+    const box = document.createElement('div');
+    box.className = 'col-popup';
+    box.innerHTML = `<strong>${escHtml(c.name)}</strong><span>${c.alt} m · ${fr(c.km)} km à ${fr(c.avg)} % · depuis ${escHtml(c.from)}</span>`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'btn btn--primary btn--sm';
+    btn.textContent = 'Voir la fiche';
+    btn.addEventListener('click', () => {
+      map.closePopup();
+      onSelect?.(c.id);
+    });
+    box.appendChild(btn);
+    marker.bindPopup(box, { className: 'map-popup', closeButton: false, offset: [0, -20] });
+    seen.set(key, marker);
+    colMarkers.set(c.id, marker);
+  }
+  if (fit && cols.length) map.fitBounds(L.latLngBounds(cols.map(c => [c.lat, c.lon])), { padding: [40, 40], maxZoom: 11 });
+}
+
+export function focusCol(col) {
+  if (!map) return;
+  map.setView([col.lat, col.lon], 12);
+  colMarkers.get(col.id)?.openPopup();
 }

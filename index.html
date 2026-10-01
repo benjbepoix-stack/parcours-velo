@@ -3,14 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Boucles de vélo de route adaptées à la séance, au vent et loin des grands axes.">
-  <meta name="theme-color" content="#0b1016">
+  <meta name="description" content="Échappée : boucles et itinéraires de vélo de route selon la séance et le vent, loin des grands axes, et carnet de cols.">
+  <meta name="theme-color" content="#17181c">
   <meta name="color-scheme" content="dark light">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Parcours">
-  <title>Parcours vélo</title>
+  <meta name="apple-mobile-web-app-title" content="Échappée">
+  <title>Échappée · parcours vélo de route</title>
   <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="manifest" href="manifest.webmanifest">
@@ -28,12 +28,13 @@
     <aside class="panel" id="panel" tabindex="-1">
       <header class="brand">
         <img class="brand__logo" src="icons/icon.svg" alt="" width="36" height="36">
-        <div class="brand__text"><h1 class="brand__title">Parcours vélo</h1><p class="brand__sub">Boucles route selon la séance et le vent</p></div>
+        <div class="brand__text"><h1 class="brand__title">Échappée</h1><p class="brand__sub">Sortez du peloton, gardez les petites routes</p></div>
         <button type="button" class="icon-btn" id="themeToggle" aria-label="Changer de thème"></button>
       </header>
 
       <div class="segmented" role="tablist" aria-label="Sections">
         <button type="button" role="tab" id="tab-ride" aria-controls="pane-ride" aria-selected="true" data-tab="ride">Sortie</button>
+        <button type="button" role="tab" id="tab-cols" aria-controls="pane-cols" aria-selected="false" data-tab="cols">Cols</button>
         <button type="button" role="tab" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved">Favoris <span class="count" id="savedCount"></span></button>
         <button type="button" role="tab" id="tab-profile" aria-controls="pane-profile" aria-selected="false" data-tab="profile">Profil</button>
       </div>
@@ -107,6 +108,34 @@
         </div>
       </section>
 
+      <!-- ============ COLS ============ -->
+      <section class="pane" id="pane-cols" role="tabpanel" aria-labelledby="tab-cols" hidden>
+        <div class="cols-summary" id="colsSummary" aria-live="polite"></div>
+        <div class="segmented segmented--two" id="colsTabs" role="radiogroup" aria-label="Affichage des cols">
+          <button type="button" role="radio" data-cols-tab="top" aria-checked="true">Top 10</button>
+          <button type="button" role="radio" data-cols-tab="all" aria-checked="false">Tous les cols</button>
+        </div>
+        <div class="cols-filters" id="colsFilters" hidden>
+          <input class="input" id="colsSearch" type="search" placeholder="Chercher un col, une ville…" autocomplete="off" aria-label="Chercher un col">
+          <div class="chips" id="colsSectors" role="radiogroup" aria-label="Secteur"></div>
+          <div class="cols-filters__row">
+            <div class="segmented segmented--three" id="colsStatus" role="radiogroup" aria-label="Statut">
+              <button type="button" role="radio" data-cols-status="all" aria-checked="true">Tous</button>
+              <button type="button" role="radio" data-cols-status="todo" aria-checked="false">À faire</button>
+              <button type="button" role="radio" data-cols-status="done" aria-checked="false">Gravis</button>
+            </div>
+            <select class="input" id="colsSort" aria-label="Trier">
+              <option value="score">Les plus durs</option>
+              <option value="near">Les plus proches</option>
+              <option value="alt">Les plus hauts</option>
+              <option value="name">Par nom</option>
+            </select>
+          </div>
+        </div>
+        <div class="cols-list" id="colsList"></div>
+        <p class="hint">Chiffres indicatifs pour le versant indiqué ; catégorie estimée à partir de la longueur, de la pente et de l’altitude. Vos cols gravis restent sur cet appareil.</p>
+      </section>
+
       <!-- ============ FAVORIS ============ -->
       <section class="pane" id="pane-saved" role="tabpanel" aria-labelledby="tab-saved" hidden>
         <p class="hint">Vos parcours enregistrés restent sur cet appareil. Rouvrez-en un pour recalculer le vent au jour et à l’heure choisis dans « Sortie ».</p>
@@ -143,7 +172,7 @@
         </div>
       </section>
 
-      <footer class="credits">Itinéraires BRouter · cartes © OpenStreetMap, CyclOSM · météo Open-Meteo · lieux Photon</footer>
+      <footer class="credits">Échappée · itinéraires BRouter · cartes © OpenStreetMap, CARTO, CyclOSM · météo Open-Meteo · lieux Photon</footer>
     </aside>
 
     <main class="map-wrap">

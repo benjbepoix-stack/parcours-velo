@@ -44,7 +44,7 @@ export function elevationChart(r, width) {
     <line x1="${L}" x2="${W - R}" y1="${y(lo)}" y2="${y(lo)}" stroke="var(--line)"/>
     <text class="axis" x="${L - 6}" y="${y(hi) + 4}" text-anchor="end">${hi} m</text>
     <text class="axis" x="${L - 6}" y="${y(lo) + 4}" text-anchor="end">${lo} m</text>
-    <path d="${area}" fill="url(#elevFill)"/><path d="${line}" fill="none" stroke="var(--accent)" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="${area}" fill="url(#elevFill)"/><path d="${line}" fill="none" stroke="var(--accent-text)" stroke-width="1.8" stroke-linejoin="round"/>
     ${band}${ticks}
   </svg>`;
 }
@@ -77,7 +77,7 @@ export function startsChart(slots, currentT, width) {
       return `<g class="slot" data-start="${s.t}" tabindex="0" role="button" aria-label="${label}">
         <rect class="bg" x="${(i * bw).toFixed(1)}" y="0" width="${bw.toFixed(1)}" height="${H}" rx="6"/>
         <rect x="${(i * bw + bw * 0.18).toFixed(1)}" y="${(H - B - bh).toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" height="${bh.toFixed(1)}" rx="3" fill="${fill}"/>
-        ${isBest || isCur ? `<text class="axis" x="${(i * bw + bw / 2).toFixed(1)}" y="${(H - B - bh - 5).toFixed(1)}" text-anchor="middle" style="fill:${isBest ? 'var(--accent)' : 'var(--sky)'};font-weight:800">${isBest ? 'top' : delta > 0 ? `+${delta}′` : '='}</text>` : ''}
+        ${isBest || isCur ? `<text class="axis" x="${(i * bw + bw / 2).toFixed(1)}" y="${(H - B - bh - 5).toFixed(1)}" text-anchor="middle" style="fill:${isBest ? 'var(--accent-text)' : 'var(--sky)'};font-weight:800">${isBest ? 'top' : delta > 0 ? `+${delta}′` : '='}</text>` : ''}
         ${s.rain !== null && s.rain >= 40 ? `<circle cx="${(i * bw + bw / 2).toFixed(1)}" cy="6" r="3" fill="var(--sky)"><title>Pluie ${s.rain} %</title></circle>` : ''}
         ${hour % 2 === 0 || slots.length <= 8 ? `<text class="axis" x="${(i * bw + bw / 2).toFixed(1)}" y="${H - 4}" text-anchor="middle">${hour}h</text>` : ''}
       </g>`;

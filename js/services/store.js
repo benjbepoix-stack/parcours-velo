@@ -49,3 +49,10 @@ export const loadTheme = () => {
   }
 };
 export const saveTheme = t => write(KEYS.theme, t);
+
+/* Cols gravis : { idDuCol: horodatage } */
+export const loadDone = () => {
+  const done = read('pv_cols_done', {});
+  return done && typeof done === 'object' && !Array.isArray(done) ? done : {};
+};
+export const saveDone = done => write('pv_cols_done', done);

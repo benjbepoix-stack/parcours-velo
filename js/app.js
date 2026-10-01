@@ -1,5 +1,5 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
-import { SESSIONS, QUIET_LEVELS, compass, compassLong, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
+import { SESSIONS, QUIET_LEVELS, compass, compassLong, haversine, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
 import { brouterWebLink } from './services/routing.js';
@@ -9,6 +9,7 @@ import * as store from './services/store.js';
 import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
+import { initCols, setColsActive } from './ui/cols.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -78,8 +79,9 @@ function applyTheme(theme) {
 /* ---------- Onglets ---------- */
 function showTab(name) {
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
-  ['ride', 'saved', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
+  ['ride', 'cols', 'saved', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
   if (name === 'saved') renderSaved();
+  setColsActive(name === 'cols');
 }
 
 /* =========================================================
@@ -694,8 +696,8 @@ function renderDetail() {
 
     <section class="block">
       <h4 class="block__title">Routes empruntées</h4>
-      <div class="bar"><span style="--c:var(--accent);flex:${mix.quiet}"></span><span style="--c:var(--sky);flex:${mix.medium}"></span><span style="--c:var(--danger);flex:${mix.major}"></span><span style="--c:var(--text-3);flex:${mix.other}"></span></div>
-      <div class="legend"><span style="--c:var(--accent)">Petites routes ${pct(mix.quiet)}</span><span style="--c:var(--sky)">Départementales ${pct(mix.medium)}</span><span style="--c:var(--danger)">Grands axes ${pct(mix.major)}</span>${mix.other > 0.01 ? `<span style="--c:var(--text-3)">Autres ${pct(mix.other)}</span>` : ''}</div>
+      <div class="bar"><span style="--c:var(--tail);flex:${mix.quiet}"></span><span style="--c:var(--sky);flex:${mix.medium}"></span><span style="--c:var(--danger);flex:${mix.major}"></span><span style="--c:var(--text-3);flex:${mix.other}"></span></div>
+      <div class="legend"><span style="--c:var(--tail)">Petites routes ${pct(mix.quiet)}</span><span style="--c:var(--sky)">Départementales ${pct(mix.medium)}</span><span style="--c:var(--danger)">Grands axes ${pct(mix.major)}</span>${mix.other > 0.01 ? `<span style="--c:var(--text-3)">Autres ${pct(mix.other)}</span>` : ''}</div>
       ${mix.cycleRoute > 0.05 ? `<p class="text">${pct(mix.cycleRoute)} sur des itinéraires cyclables balisés.</p>` : ''}
       ${warningsFor(r).map(w => `<p class="warn">${icon('alert', 16)}<span>${esc(w)}</span></p>`).join('')}
     </section>
@@ -1015,6 +1017,23 @@ function init() {
   });
   $('#savedList').addEventListener('click', onSavedAction);
   $('#profileForm').addEventListener('submit', submitProfile);
+  initCols({
+    getStart: () => (isPoint(prefs.start) ? ll(prefs.start) : null),
+    onRide: col => {
+      // Le col devient un point de passage de la prochaine sortie.
+      if (prefs.mode === 'oneway' && !isPoint(prefs.end)) setStopPoint('end', [col.lat, col.lon], col.name);
+      else setStopPoint(addVia(), [col.lat, col.lon], col.name);
+      renderDistance();
+      showTab('ride');
+      const far = isPoint(prefs.start) ? haversine(ll(prefs.start), [col.lat, col.lon]) / 1000 : 0;
+      toast(
+        far > 50
+          ? `${col.name} est à ${Math.round(far)} km de votre départ : déplacez le départ près du col (pied : ${col.from}).`
+          : `${col.name} ajouté à votre sortie`,
+        { error: far > 50 }
+      );
+    }
+  });
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }

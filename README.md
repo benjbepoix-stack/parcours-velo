@@ -1,6 +1,8 @@
-# Parcours vélo
+# Échappée
 
-Application web (installable sur iPhone et Android) qui propose des **boucles de vélo de route** adaptées à ta séance, **au vent du jour** et **loin des grands axes**.
+*Sortez du peloton, gardez les petites routes.*
+
+Application web (installable sur iPhone et Android) qui propose des **boucles et itinéraires de vélo de route** adaptés à ta séance, **au vent du jour** et **loin des grands axes**, avec un **carnet de cols**.
 
 ## Fonctionnalités
 
@@ -21,6 +23,22 @@ Application web (installable sur iPhone et Android) qui propose des **boucles de
 - Thème clair / sombre, fonctionne hors ligne pour l'interface, les favoris et l'export (le calcul d'itinéraires et la météo demandent du réseau).
 
 Tout est gratuit et sans clé d'API : BRouter, Open-Meteo, Photon (recherche de lieux), tuiles CARTO / OpenStreetMap / CyclOSM / OpenTopoMap / Waymarked Trails. Les données personnelles (profil, favoris) restent dans le navigateur.
+
+## Carnet de cols
+
+L'onglet **Cols** rassemble une centaine de cols routiers : Alpes du Nord, Alpes du Sud et Provence, Alpes suisses, Alpes italiennes, Jura, Vosges et Pyrénées (`js/data/cols.js`).
+
+- Pour chaque col et versant : altitude, longueur, pente moyenne et maximale, dénivelé, catégorie estimée (HC, 1re à 4e, d'après l'indice de difficulté FIETS).
+- **Top 10** des cols à faire, avec la raison du choix.
+- Filtres par secteur, recherche, tri (les plus durs, les plus proches de ton départ, les plus hauts) et statut (à faire / gravis).
+- **Je l'ai fait** : coche les cols gravis (date enregistrée) ; progression globale et par secteur, dénivelé cumulé. Les données restent sur l'appareil.
+- **Carte** : les cols s'affichent sur la carte ; **Y passer** ajoute le col comme point de passage de la prochaine sortie.
+
+Les chiffres sont indicatifs (versant indiqué) : vérifie le profil exact avant une sortie engagée.
+
+## Identité
+
+Jaune maillot (#FFD400) sur gris bitume (#17181C), titres en Barlow Condensed italique, texte en Barlow (polices sous licence SIL OFL, `fonts/OFL.txt`, servies par l'app pour fonctionner hors ligne).
 
 ## Publier avec GitHub Pages
 
@@ -50,6 +68,7 @@ Les tests couvrent le moteur de calcul (`js/core/ride.js`) : géométrie, modèl
 index.html              Squelette de l'app
 css/app.css             Styles (thèmes clair / sombre)
 js/app.js               Interface : formulaire, résultats, favoris, profil
+js/data/cols.js         Catalogue des cols et top 10
 js/core/ride.js         Moteur : géométrie, boucles, physique, vent, score, GPX (sans DOM)
 js/core/planner.js      Génération et classement des boucles
 js/core/dates.js        Dates locales

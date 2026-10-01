@@ -1,13 +1,13 @@
 {
-  "name": "Parcours vélo",
-  "short_name": "Parcours",
-  "description": "Boucles de vélo de route adaptées à la séance, au vent et loin des grands axes.",
+  "name": "Échappée",
+  "short_name": "Échappée",
+  "description": "Boucles et itinéraires de vélo de route selon la séance et le vent, loin des grands axes, et carnet de cols.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#0b1016",
-  "theme_color": "#0b1016",
+  "background_color": "#17181c",
+  "theme_color": "#17181c",
   "lang": "fr",
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
