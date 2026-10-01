@@ -1,4 +1,4 @@
-/* Cols routiers : Alpes (France, Suisse, Italie), Jura, Vosges, Pyrénées.
+/* Cols routiers : Alpes (France, Suisse, Italie), Jura, Vosges, Pyrénées (environ 150 montées).
    Chiffres indicatifs pour le versant indiqué (départ « from ») : longueur (km),
    pente moyenne et maximale (%), altitude du sommet (m). Le dénivelé est déduit
    de la longueur et de la pente moyenne. Coordonnées du sommet approximatives. */
@@ -46,6 +46,16 @@ const RAW = [
   ['chamrousse', 'Chamrousse', 'alpes-nord', 'Isère · Belledonne', 1730, 'Uriage-les-Bains', 17.8, 7.4, 10.5, 45.1220, 5.8810],
   ['deux-alpes', 'Les Deux Alpes', 'alpes-nord', 'Isère · Oisans', 1650, 'Barrage du Chambon', 9.8, 7.0, 10.0, 45.0090, 6.1230],
   ['ornon', 'Col d’Ornon', 'alpes-nord', 'Isère · Oisans', 1371, 'Le Bourg-d’Oisans', 11.6, 5.6, 9.0, 44.9800, 5.9850],
+  ['iseran-bsm', 'Col de l’Iseran (Bourg-Saint-Maurice)', 'alpes-nord', 'Savoie · Tarentaise', 2770, 'Bourg-Saint-Maurice', 47.6, 4.1, 9.0, 45.4170, 7.0306, 'Le plus long : par Tignes et Val-d’Isère'],
+  ['tignes', 'Tignes (lac)', 'alpes-nord', 'Savoie · Tarentaise', 2100, 'Bourg-Saint-Maurice', 31.0, 4.2, 8.0, 45.4680, 6.9090],
+  ['val-thorens', 'Val Thorens', 'alpes-nord', 'Savoie · Tarentaise', 2365, 'Moûtiers', 36.0, 5.2, 9.0, 45.2970, 6.5800],
+  ['annes', 'Col des Annes', 'alpes-nord', 'Haute-Savoie · Aravis', 1720, 'Le Grand-Bornand', 6.2, 8.6, 11.0, 45.9660, 6.4880],
+  ['solaison', 'Plateau de Solaison', 'alpes-nord', 'Haute-Savoie · Bornes', 1500, 'Brison', 11.6, 9.0, 12.0, 46.0310, 6.4760, 'Montée régulière et très raide'],
+  ['arpettaz', 'Col de l’Arpettaz', 'alpes-nord', 'Savoie · Aravis', 1581, 'Ugine', 13.6, 8.0, 12.0, 45.7830, 6.4530],
+  ['luitel', 'Col du Luitel', 'alpes-nord', 'Isère · Belledonne', 1262, 'Séchilienne', 10.0, 8.9, 12.0, 45.0850, 5.8560],
+  ['machine', 'Col de la Machine (Combe Laval)', 'alpes-nord', 'Drôme · Vercors', 1011, 'Saint-Jean-en-Royans', 12.5, 6.1, 8.0, 45.0400, 5.3330, 'Route en balcon taillée dans la falaise'],
+  ['menee', 'Col de Menée', 'alpes-nord', 'Drôme · Vercors', 1402, 'Châtillon-en-Diois', 17.0, 4.9, 8.0, 44.8150, 5.5130],
+  ['rousset', 'Col du Rousset', 'alpes-nord', 'Drôme · Vercors', 1254, 'Die', 20.9, 4.0, 7.0, 44.8590, 5.4040],
 
   // ---------- Alpes du Sud & Provence ----------
   ['ventoux-bedoin', 'Mont Ventoux (Bédoin)', 'alpes-sud', 'Vaucluse', 1909, 'Bédoin', 21.5, 7.5, 12.0, 44.1740, 5.2785, 'Le versant mythique, par la forêt puis le désert lunaire'],
@@ -66,6 +76,11 @@ const RAW = [
   ['madone', 'Col de la Madone', 'alpes-sud', 'Alpes-Maritimes', 925, 'Menton', 13.0, 7.1, 10.0, 43.8100, 7.4460, 'Le col d’entraînement des pros de la Côte'],
   ['braus', 'Col de Braus', 'alpes-sud', 'Alpes-Maritimes', 1002, 'L’Escarène', 10.4, 6.2, 9.0, 43.8790, 7.3820],
   ['eze', 'Col d’Èze', 'alpes-sud', 'Alpes-Maritimes', 507, 'Nice', 10.0, 4.9, 8.0, 43.7490, 7.3550],
+  ['lombarde', 'Col de la Lombarde', 'alpes-sud', 'Alpes-Maritimes · Tinée', 2350, 'Isola', 21.5, 6.9, 10.0, 44.2040, 7.1450],
+  ['couillole', 'Col de la Couillole', 'alpes-sud', 'Alpes-Maritimes · Tinée', 1678, 'Saint-Sauveur-sur-Tinée', 16.0, 7.4, 10.0, 44.1020, 7.0620],
+  ['valberg', 'Col de Valberg', 'alpes-sud', 'Alpes-Maritimes', 1672, 'Guillaumes', 13.0, 6.7, 9.0, 44.0960, 6.9310],
+  ['champs', 'Col des Champs', 'alpes-sud', 'Alpes-de-Haute-Provence', 2087, 'Colmars', 12.0, 7.1, 11.0, 44.1910, 6.6980],
+  ['vence', 'Col de Vence', 'alpes-sud', 'Alpes-Maritimes', 963, 'Vence', 10.0, 6.3, 9.0, 43.7580, 7.0810],
 
   // ---------- Alpes suisses ----------
   ['furka', 'Furkapass', 'suisse', 'Uri · Valais', 2429, 'Realp', 12.7, 7.0, 11.0, 46.5725, 8.4150],
@@ -84,6 +99,20 @@ const RAW = [
   ['fluela', 'Flüelapass', 'suisse', 'Grisons', 2383, 'Davos', 13.0, 6.3, 10.0, 46.7500, 9.9470],
   ['julier', 'Julierpass', 'suisse', 'Grisons', 2284, 'Silvaplana', 7.0, 6.7, 9.0, 46.4720, 9.7290],
   ['bernina', 'Berninapass', 'suisse', 'Grisons', 2328, 'Poschiavo', 18.6, 7.1, 10.0, 46.4120, 10.0210],
+  ['umbrail', 'Umbrailpass', 'suisse', 'Grisons · Val Müstair', 2501, 'Santa Maria', 13.4, 8.3, 11.0, 46.5420, 10.4330, 'Rejoint le Stelvio à 3 km du sommet'],
+  ['ofen', 'Ofenpass (Pass dal Fuorn)', 'suisse', 'Grisons · Parc national', 2149, 'Santa Maria', 14.0, 5.5, 9.0, 46.6400, 10.2920],
+  ['splugen', 'Splügenpass', 'suisse', 'Grisons', 2113, 'Splügen', 9.0, 7.3, 10.0, 46.5060, 9.3300],
+  ['san-bernardino', 'San Bernardino', 'suisse', 'Grisons', 2065, 'Mesocco', 22.0, 5.9, 9.0, 46.4970, 9.1700],
+  ['maloja', 'Malojapass', 'suisse', 'Grisons · Bregaglia', 1815, 'Vicosoprano', 12.5, 6.0, 9.0, 46.4000, 9.6940, 'Lacets serrés à la fin'],
+  ['lukmanier', 'Lukmanierpass', 'suisse', 'Grisons · Tessin', 1915, 'Disentis', 21.0, 3.7, 9.0, 46.5630, 8.8010],
+  ['pragel', 'Pragelpass', 'suisse', 'Schwytz · Glaris', 1550, 'Muotathal', 15.0, 6.3, 18.0, 47.0060, 8.9170, 'Route étroite, passages très raides'],
+  ['glaubenbielen', 'Glaubenbielen', 'suisse', 'Obwald', 1611, 'Giswil', 15.0, 7.5, 11.0, 46.8110, 8.0930],
+  ['jaun', 'Jaunpass', 'suisse', 'Berne · Fribourg', 1509, 'Boltigen', 9.5, 7.2, 10.0, 46.5960, 7.3430],
+  ['mosses', 'Col des Mosses', 'suisse', 'Vaud', 1445, 'Aigle', 18.0, 5.8, 9.0, 46.3940, 7.0980],
+  ['pillon', 'Col du Pillon', 'suisse', 'Vaud · Berne', 1546, 'Les Diablerets', 6.0, 6.4, 9.0, 46.3550, 7.2080],
+  ['sanetsch', 'Col du Sanetsch', 'suisse', 'Valais', 2252, 'Sion (Pont-de-la-Morge)', 29.0, 6.0, 13.0, 46.3330, 7.2870, 'Long et sauvage, jusqu’au lac du barrage'],
+  ['champex', 'Champex-Lac', 'suisse', 'Valais', 1498, 'Orsières', 9.0, 6.6, 9.0, 46.0300, 7.1150],
+  ['crans-montana', 'Crans-Montana', 'suisse', 'Valais', 1500, 'Sierre', 15.0, 6.4, 9.0, 46.3100, 7.4810],
 
   // ---------- Alpes italiennes ----------
   ['stelvio', 'Passo dello Stelvio', 'italie', 'Haut-Adige', 2757, 'Prato allo Stelvio', 24.3, 7.4, 12.0, 46.5285, 10.4530, '48 lacets numérotés'],
@@ -102,6 +131,14 @@ const RAW = [
   ['tre-cime', 'Tre Cime di Lavaredo', 'italie', 'Dolomites', 2320, 'Misurina', 7.0, 8.1, 18.0, 46.6130, 12.2970, 'Route à péage, derniers km très raides'],
   ['grappa', 'Monte Grappa', 'italie', 'Vénétie', 1745, 'Romano d’Ezzelino', 25.6, 6.1, 11.0, 45.8710, 11.8010],
   ['ghisallo', 'Madonna del Ghisallo', 'italie', 'Lombardie · Lac de Côme', 754, 'Bellagio', 10.6, 5.0, 14.0, 45.9200, 9.2680, 'Chapelle et musée du cyclisme au sommet'],
+  ['nivolet', 'Colle del Nivolet', 'italie', 'Piémont · Grand Paradis', 2612, 'Ceresole Reale', 17.8, 6.2, 10.0, 45.4800, 7.1410, 'Lacs d’altitude au cœur du Grand Paradis'],
+  ['agnello', 'Colle dell’Agnello', 'italie', 'Piémont', 2744, 'Pontechianale', 22.0, 7.2, 14.0, 44.6840, 6.9790],
+  ['san-marco', 'Passo San Marco', 'italie', 'Lombardie', 1992, 'Morbegno', 26.0, 6.7, 11.0, 46.0400, 9.6250],
+  ['crocedomini', 'Passo di Crocedomini', 'italie', 'Lombardie', 1892, 'Breno', 23.0, 6.7, 12.0, 45.9120, 10.4110],
+  ['manghen', 'Passo Manghen', 'italie', 'Trentin', 2047, 'Borgo Valsugana', 22.0, 7.6, 12.0, 46.1740, 11.4370],
+  ['rolle', 'Passo Rolle', 'italie', 'Dolomites', 1980, 'San Martino di Castrozza', 9.0, 5.9, 8.0, 46.2970, 11.7860],
+  ['valparola', 'Passo Valparola', 'italie', 'Dolomites', 2192, 'La Villa', 14.0, 5.4, 9.0, 46.5330, 11.9910],
+  ['campolongo', 'Passo Campolongo', 'italie', 'Dolomites', 1875, 'Corvara', 6.0, 5.4, 8.0, 46.5140, 11.8740],
 
   // ---------- Jura ----------
   ['grand-colombier', 'Grand Colombier', 'jura', 'Ain · Bugey', 1501, 'Culoz', 18.3, 6.8, 12.0, 45.9000, 5.7600, 'Le géant du Jura, passages à plus de 10 %'],
@@ -112,6 +149,11 @@ const RAW = [
   ['chasseral', 'Chasseral', 'jura', 'Berne', 1548, 'Saint-Imier', 13.0, 5.8, 10.0, 47.1330, 7.0590],
   ['weissenstein', 'Weissenstein', 'jura', 'Soleure', 1284, 'Oberdorf', 5.2, 12.0, 20.0, 47.2520, 7.5120, 'Court mais très raide'],
   ['grand-taureau', 'Le Grand Taureau', 'jura', 'Doubs · Haut-Doubs', 1323, 'Pontarlier', 5.3, 9.1, 12.0, 46.9240, 6.4140],
+  ['grand-colombier-anglefort', 'Grand Colombier (Anglefort)', 'jura', 'Ain · Bugey', 1501, 'Anglefort', 15.9, 7.9, 22.0, 45.9000, 5.7600, 'Le versant le plus dur, passages à plus de 20 %'],
+  ['givrine', 'Col de la Givrine', 'jura', 'Vaud', 1228, 'Nyon', 19.0, 4.4, 8.0, 46.4530, 6.1060],
+  ['mollendruz', 'Col du Mollendruz', 'jura', 'Vaud', 1180, 'L’Isle', 8.0, 6.4, 9.0, 46.6480, 6.3690],
+  ['croix-serra', 'Col de la Croix de la Serra', 'jura', 'Jura · Haut-Jura', 1049, 'Saint-Claude', 14.0, 4.4, 8.0, 46.3300, 5.9000],
+  ['mont-crosin', 'Mont Crosin', 'jura', 'Berne', 1227, 'Saint-Imier', 6.0, 7.1, 10.0, 47.1800, 7.0200],
 
   // ---------- Vosges ----------
   ['planche-belles-filles', 'La Planche des Belles Filles', 'vosges', 'Haute-Saône', 1148, 'Plancher-les-Mines', 5.9, 8.5, 20.0, 47.7720, 6.7810, 'Arrivée du Tour, final très raide'],

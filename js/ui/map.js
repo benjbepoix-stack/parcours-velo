@@ -16,7 +16,15 @@ let planActive = true;
 let lastDraw = null;
 
 const cssVar = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-const CARTO = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · © <a href="https://carto.com/attributions">CARTO</a>';
+const ESRI = 'Fond © <a href="https://www.esri.com">Esri</a>, HERE, Garmin, © OpenStreetMap';
+const OSM = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const esri = name => `https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/${name}/MapServer/tile/{z}/{y}/{x}`;
+/** Fond « Plan » : gris clair ou foncé d'Esri (sans clé), noms des lieux en surimpression. */
+const canvas = (base, labels) =>
+  L.layerGroup([
+    L.tileLayer(esri(base), { maxNativeZoom: 16, maxZoom: 19, attribution: ESRI }),
+    L.tileLayer(esri(labels), { maxNativeZoom: 16, maxZoom: 19, pane: 'labels' })
+  ]);
 
 /**
  * @param {{center:[number,number], dark:boolean, onTap:(latlng)=>void, onMoveStop:(id, latlng)=>void}} opts
@@ -29,9 +37,12 @@ export function initMap(host, { center, dark, onTap, onMoveStop }) {
   }
   callbacks = { onTap, onMoveStop };
   map = L.map(host, { zoomControl: true, attributionControl: true, zoomSnap: 0.5 }).setView(center, 12);
-  // Fond « Plan » : CARTO Voyager (clair) ou Dark Matter (sombre) — lisible, peu chargé.
-  planLight = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: CARTO });
-  planDark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: CARTO });
+  // Noms de lieux au-dessus du fond mais sous le tracé.
+  const labels = map.createPane('labels');
+  labels.style.zIndex = 350;
+  labels.style.pointerEvents = 'none';
+  planLight = canvas('World_Light_Gray_Base', 'World_Light_Gray_Reference');
+  planDark = canvas('World_Dark_Gray_Base', 'World_Dark_Gray_Reference');
   const plan = L.layerGroup();
   const cyclosm = L.tileLayer('https://{s}.tile-cyclosm.openstreetmap.fr/cyclosm/{z}/{x}/{y}.png', {
     maxZoom: 19,
@@ -42,7 +53,18 @@ export function initMap(host, { center, dark, onTap, onMoveStop }) {
   const cycling = L.tileLayer('https://tile.waymarkedtrails.org/cycling/{z}/{x}/{y}.png', { maxZoom: 18, opacity: 0.7, attribution: '<a href="https://cycling.waymarkedtrails.org">Waymarked Trails</a>' });
   plan.addTo(map);
   (dark ? planDark : planLight).addTo(plan);
-  L.control.layers({ Plan: plan, 'Vélo (CyclOSM)': cyclosm, Relief: topo }, { 'Itinéraires cyclables balisés': cycling }, { position: 'topright' }).addTo(map);
+  const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: OSM });
+  L.control.layers({ Plan: plan, Standard: osm, 'Vélo (CyclOSM)': cyclosm, Relief: topo }, { 'Itinéraires cyclables balisés': cycling }, { position: 'topright' }).addTo(map);
+  // Repli : si le fond « Plan » ne répond pas (tuiles en erreur), bascule sur OpenStreetMap.
+  let tileErrors = 0;
+  const watch = group => group.eachLayer(l => l.on('tileerror', () => {
+    if (++tileErrors === 6 && map.hasLayer(plan)) {
+      map.removeLayer(plan);
+      osm.addTo(map);
+    }
+  }));
+  watch(planLight);
+  watch(planDark);
   L.control.scale({ imperial: false, position: 'topleft' }).addTo(map);
   map.on('baselayerchange', e => {
     planActive = e.layer === plan;

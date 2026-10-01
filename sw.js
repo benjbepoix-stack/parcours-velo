@@ -1,6 +1,6 @@
 /* Service worker : l'interface fonctionne hors ligne (favoris, GPX) ; itinéraires, météo et
    fonds de carte restent en ligne (tuiles déjà vues servies depuis le cache si possible). */
-const VERSION = 'pv-v5';
+const VERSION = 'pv-v6';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/images/layers.png', 'vendor/leaflet/images/layers-2x.png',
@@ -9,8 +9,8 @@ const SHELL = [
   'js/ui/icons.js', 'js/ui/charts.js', 'js/ui/map.js', 'js/ui/cols.js', 'js/data/cols.js',
   'fonts/barlow-400.woff2', 'fonts/barlow-600.woff2', 'fonts/barlow-700.woff2', 'fonts/barlow-condensed-700-italic.woff2', 'fonts/barlow-condensed-800-italic.woff2', 'icons/icon.svg', 'icons/icon-192.png'
 ];
-const TILES = 'pv-tiles';
-const TILE_HOSTS = /basemaps\.cartocdn|tile-cyclosm|tile\.openstreetmap|opentopomap|waymarkedtrails/;
+const TILES = 'pv-tiles-2'; // nouveau nom : purge les anciennes tuiles CARTO « API KEY REQUIRED »
+const TILE_HOSTS = /arcgisonline|tile-cyclosm|tile\.openstreetmap|opentopomap|waymarkedtrails/;
 const MAX_TILES = 600;
 
 self.addEventListener('install', e => {

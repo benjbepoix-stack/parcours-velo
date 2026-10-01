@@ -4,9 +4,9 @@ import { COLS, SECTORS, TOP10, difficulty, category } from '../js/data/cols.js';
 
 // Emprise approximative de chaque secteur [latMin, latMax, lonMin, lonMax]
 const BOX = {
-  'alpes-nord': [44.8, 46.5, 5.5, 7.2],
+  'alpes-nord': [44.8, 46.5, 5.2, 7.2],
   'alpes-sud': [43.6, 45.1, 5.0, 7.6],
-  suisse: [45.8, 47.0, 6.8, 10.5],
+  suisse: [45.8, 47.1, 6.8, 10.5],
   italie: [44.2, 46.8, 6.8, 13.2],
   jura: [45.6, 47.4, 5.6, 7.7],
   vosges: [47.6, 48.6, 6.5, 7.5],
@@ -28,7 +28,7 @@ test('chaque col est complet et cohérent', () => {
     assert.ok(c.lat >= a && c.lat <= b && c.lon >= c1 && c.lon <= d, `${c.id} : coordonnées hors secteur (${c.lat}, ${c.lon})`);
     assert.ok(c.from && c.area && c.name, `${c.id} : champs manquants`);
   }
-  assert.ok(COLS.length >= 100, `${COLS.length} cols`);
+  assert.ok(COLS.length >= 140, `${COLS.length} cols`);
 });
 
 test('chaque secteur a des cols', () => {
