@@ -154,11 +154,8 @@
       <!-- ============ COURSES ============ -->
       <section class="pane" id="pane-races" role="tabpanel" aria-labelledby="tab-races" hidden>
         <p class="hint">Sélection curatée, mise à jour à la main · dates à vérifier avant d’ajouter. « Ajouter » envoie la course directement dans le planning de l’app Carnet.</p>
-        <div class="segmented segmented--three" id="racesGroups" role="radiogroup" aria-label="Catégorie de courses">
-          <button type="button" role="radio" data-race-group="all" aria-checked="true">Toutes</button>
-          <button type="button" role="radio" data-race-group="regional" aria-checked="false">Franche-Comté</button>
-          <button type="button" role="radio" data-race-group="national" aria-checked="false">Classiques</button>
-        </div>
+        <div class="chips" id="racesYear" role="radiogroup" aria-label="Édition"></div>
+        <div class="chips" id="racesGroups" role="radiogroup" aria-label="Région"></div>
         <div id="racesList"></div>
       </section>
 

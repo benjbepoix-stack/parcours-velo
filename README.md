@@ -39,9 +39,11 @@ L'onglet **Cols** rassemble environ 160 montées routières : Alpes du Nord, Alp
 Les chiffres sont indicatifs (versant indiqué) : vérifie le profil exact avant une sortie engagée.
 
 ## Courses
-L'onglet **Courses** rassemble une sélection curatée (`js/data/races.js`, mise à jour à la main) de cyclosportives et granfondos : Franche-Comté / Jura (La Bisontine, La Cyclomontagnarde du Jura, Les Monts d'Or du Jura, Le Défi du Crêt Monniot) et grandes classiques nationales et alpines (Étape du Tour, Marmotte Granfondo, L'Ardéchoise, Haute Route Alpes, Paris-Roubaix Challenge, Ventoux Dénivelé, Trois Ballons, Luchon-Ancizan, GFNY Vaujany, Tour du Mont-Blanc cyclo, La Grenobloise). Un filtre (Toutes / Franche-Comté / Classiques) permet de restreindre la liste. La plupart des dates d'édition 2027 ne sont pas encore publiées : une date estimée est pré-remplie mais reste modifiable avant d'ajouter.
+L'onglet **Courses** rassemble une sélection curatée (`js/data/races.js`, mise à jour à la main) de 30 cyclosportives et granfondos couvrant la France entière : Franche-Comté/Jura, Alpes & Provence, Pyrénées, Grand Est & Nord, Bretagne & Normandie, Centre & Sud-Ouest, Occitanie & Corse. Un filtre par région et un sélecteur d'édition (année en cours / suivante) permettent de restreindre l'affichage. La plupart des dates précises ne sont pas encore publiées aussi loin à l'avance : une date estimée est pré-remplie mais reste modifiable avant d'ajouter.
 
 « Ajouter » (une course, ou plusieurs via les cases à cocher et la barre en bas) envoie directement la course dans le planning de l'app **Carnet** (Mon tableau de bord), onglet Courses — via sa base Firebase partagée (même choix assumé, sans mot de passe, que ses autres synchronisations) : pas besoin d'ouvrir Carnet, la course y apparaît dès la prochaine synchronisation. Le détail (distances, source) part en note ; la distance chiffrée est à préciser dans Carnet une fois le format choisi. Détail dans `js/services/carnet-sync.js`.
+
+**Mise à jour annuelle** : chaque épreuve porte deux éditions dans `editions: [{year, date, confirmed}, ...]` (en cours / suivante). Une fois par an (idéalement en fin de saison, au moment où les dates de la saison suivante commencent à sortir) : décaler l'édition « suivante » vers « en cours », ajouter une nouvelle édition « suivante » (même date estimée +364 jours en attendant l'annonce officielle), et passer `confirmed: true` dès qu'une date officielle est publiée par l'organisateur.
 
 ## Plusieurs jours
 
