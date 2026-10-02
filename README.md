@@ -6,7 +6,7 @@ Application web (installable sur iPhone et Android) qui propose des **boucles et
 
 ## Fonctionnalités
 
-- **Boucle ou aller simple** : une boucle autour du départ, ou un trajet d'un point A à un point B (trois itinéraires comparés).
+- **Boucle, aller simple ou plusieurs jours** : une boucle autour du départ, un trajet d'un point A à un point B (trois itinéraires comparés), ou un itinéraire réparti sur plusieurs jours.
 - **Points de passage** : ajoute les villages, cols ou routes par où tu veux passer, en les tapant (suggestions au fil de la saisie) ou d'un appui sur la carte. En boucle, l'app passe par tes points au plus court, ou ajoute un détour pour atteindre la distance voulue, et choisit le sens de rotation selon le vent. Les repères se déplacent au doigt sur la carte.
 - **Saisie en quelques gestes** : Boucle / Aller simple, étapes, séance, curseur de distance, « Aujourd'hui / Demain / Autre jour », niveau de trafic ; le dénivelé visé est dans « Plus d'options ». Le bouton de calcul reste visible en bas de l'écran.
 - **Séances** : endurance, récupération, intervalles, côtes, sortie longue ou libre. Chaque séance fixe l'intensité (en % de ta FTP) et le dénivelé visé ; distance et dénivelé restent modifiables.
@@ -37,6 +37,10 @@ L'onglet **Cols** rassemble environ 160 montées routières : Alpes du Nord, Alp
 - **Carte** : les cols s'affichent sur la carte ; **Y passer** ajoute le col comme point de passage de la prochaine sortie.
 
 Les chiffres sont indicatifs (versant indiqué) : vérifie le profil exact avant une sortie engagée.
+
+## Plusieurs jours
+
+Pour préparer une traversée ou un cyclo-camping : indique un départ, une arrivée (et d'éventuels points de passage) et un nombre de jours (2 à 10). L'app calcule un seul itinéraire point à point avec BRouter, puis le **découpe automatiquement en étapes de distance à peu près égale** (`js/core/trip.js`). Pour chaque étape : distance et dénivelé positif ; export GPX séparé (une étape = un fichier à charger sur le GPS ou l'app du jour), et export de l'itinéraire complet en un seul fichier. Contrairement aux modes Boucle et Aller simple, ce mode ne simule pas le vent (ni heure de départ, ni créneau favorable) : il privilégie distance, dénivelé et qualité de route, qui restent pertinents plusieurs jours à l'avance.
 
 ## Identité
 
@@ -73,6 +77,7 @@ js/app.js               Interface : formulaire, résultats, favoris, profil
 js/data/cols.js         Catalogue des cols et top 10
 js/core/ride.js         Moteur : géométrie, boucles, physique, vent, score, GPX (sans DOM)
 js/core/planner.js      Génération et classement des boucles
+js/core/trip.js         Découpage d'un itinéraire en étapes (mode « Plusieurs jours »)
 js/core/dates.js        Dates locales
 js/services/            BRouter (+ profil vélo de route), Open-Meteo, Photon, stockage local
 js/ui/                  Carte Leaflet, graphiques SVG, icônes

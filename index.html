@@ -45,6 +45,7 @@
           <div class="segmented segmented--mode" id="modeSwitch" role="radiogroup" aria-label="Type de parcours">
             <button type="button" role="radio" data-mode="loop" aria-checked="true"><span data-icon="loop"></span>Boucle</button>
             <button type="button" role="radio" data-mode="oneway" aria-checked="false"><span data-icon="arrow"></span>Aller simple</button>
+            <button type="button" role="radio" data-mode="multi" aria-checked="false"><span data-icon="route"></span>Plusieurs jours</button>
           </div>
 
           <section class="step" aria-labelledby="stepRoute">
@@ -64,6 +65,11 @@
               <div class="range-field__head"><label class="label" for="f-km">Distance</label><output class="range-field__value" id="kmOut" for="f-km"></output></div>
               <input type="range" id="f-km" min="20" max="200" step="5">
               <p class="hint" id="distanceHint"></p>
+            </div>
+            <div class="range-field" id="daysField" hidden>
+              <div class="range-field__head"><label class="label" for="f-days">Nombre de jours</label><output class="range-field__value" id="daysOut" for="f-days"></output></div>
+              <input type="range" id="f-days" min="2" max="10" step="1">
+              <p class="hint">L’itinéraire entre le départ et l’arrivée est découpé automatiquement en étapes de distance à peu près égale.</p>
             </div>
           </section>
 

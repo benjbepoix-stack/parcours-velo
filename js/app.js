@@ -1,6 +1,7 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
 import { SESSIONS, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
+import { planMultiDay, clampDays, stageGPX, MIN_DAYS, MAX_DAYS } from './core/trip.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
 import { brouterWebLink } from './services/routing.js';
 import { fetchWind } from './services/wind.js';
@@ -28,17 +29,20 @@ const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 const uid = () => Math.random().toString(36).slice(2, 9);
 const isPoint = p => p && Number.isFinite(p.lat) && Number.isFinite(p.lon);
 const ll = p => [p.lat, p.lon];
+/** Modes point à point (nécessitent une arrivée), par opposition à la boucle. */
+const needsEnd = mode => mode === 'oneway' || mode === 'multi';
 
 /* ---------- Préférences (avec migration de l'ancien format) ---------- */
 const DEFAULT_START = { lat: 47.2378, lon: 6.0241, name: 'Besançon' };
-const prefs = store.loadPrefs({ mode: 'loop', session: 'endurance', km: SESSIONS.endurance.km, ascent: '', quiet: 'quiet', start: DEFAULT_START, end: null, vias: [] });
+const prefs = store.loadPrefs({ mode: 'loop', session: 'endurance', km: SESSIONS.endurance.km, ascent: '', quiet: 'quiet', start: DEFAULT_START, end: null, vias: [], days: 3 });
 if (Array.isArray(prefs.start)) prefs.start = { lat: prefs.start[0], lon: prefs.start[1], name: prefs.startName || null };
 delete prefs.startName;
 if (!isPoint(prefs.start)) prefs.start = { ...DEFAULT_START };
 if (!SESSIONS[prefs.session]) prefs.session = 'endurance';
 if (!QUIET_LEVELS[prefs.quiet]) prefs.quiet = 'quiet';
-if (!['loop', 'oneway'].includes(prefs.mode)) prefs.mode = 'loop';
+if (!['loop', 'oneway', 'multi'].includes(prefs.mode)) prefs.mode = 'loop';
 if (!isPoint(prefs.end)) prefs.end = null;
+prefs.days = clampDays(prefs.days);
 prefs.vias = Array.isArray(prefs.vias) ? prefs.vias.filter(isPoint).map(v => ({ ...v, id: v.id || uid() })) : [];
 prefs.km = Math.min(200, Math.max(20, Number(prefs.km) || SESSIONS[prefs.session].km));
 const savePrefs = () => store.savePrefs(prefs);
@@ -92,7 +96,7 @@ function showTab(name) {
 function stopList() {
   const list = [{ id: 'start', kind: 'start', point: prefs.start }];
   prefs.vias.forEach(v => list.push({ id: v.id, kind: 'via', point: v }));
-  if (prefs.mode === 'oneway') list.push({ id: 'end', kind: 'end', point: prefs.end });
+  if (needsEnd(prefs.mode)) list.push({ id: 'end', kind: 'end', point: prefs.end });
   return list;
 }
 
@@ -299,7 +303,7 @@ function onMapTap(latlng) {
   }
   const actions = [{ label: 'Départ ici', run: () => setStopPoint('start', latlng) }];
   actions.push({ label: 'Ajouter un passage', primary: true, run: () => setStopPoint(addVia(), latlng) });
-  if (prefs.mode === 'oneway') actions.push({ label: 'Arrivée ici', run: () => setStopPoint('end', latlng) });
+  if (needsEnd(prefs.mode)) actions.push({ label: 'Arrivée ici', run: () => setStopPoint('end', latlng) });
   mapUi.showActions(latlng, actions);
 }
 
@@ -330,8 +334,9 @@ function onStopsClick(e) {
 /* ---------- Mode, séance, distance, jour, routes ---------- */
 function renderMode() {
   document.querySelectorAll('[data-mode]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.mode === prefs.mode)));
-  $('#submitLabel').textContent = prefs.mode === 'loop' ? 'Trouver mes boucles' : 'Trouver mon itinéraire';
+  $('#submitLabel').textContent = prefs.mode === 'loop' ? 'Trouver mes boucles' : prefs.mode === 'multi' ? 'Planifier mon itinéraire' : 'Trouver mon itinéraire';
   renderDistance();
+  renderDays();
 }
 
 function setMode(mode) {
@@ -342,10 +347,21 @@ function setMode(mode) {
   renderStops();
   syncMap();
   invalidateResult();
-  if (mode === 'oneway' && !isPoint(prefs.end)) {
+  if (needsEnd(mode) && !isPoint(prefs.end)) {
     const input = $('[data-stop="end"] .stop__input');
     input?.focus();
   }
+}
+
+/** Pas à pas du nombre de jours (mode « Plusieurs jours »). */
+function renderDays() {
+  const field = $('#daysField');
+  if (!field) return;
+  field.hidden = prefs.mode !== 'multi';
+  $('#daysOut').textContent = `${prefs.days} jour${prefs.days > 1 ? 's' : ''}`;
+  $('#f-days').value = prefs.days;
+  $('#f-days').min = MIN_DAYS;
+  $('#f-days').max = MAX_DAYS;
 }
 
 function renderSessions() {
@@ -359,7 +375,7 @@ function renderSessions() {
 const SHORTEST = 15;
 function renderDistance() {
   const field = $('#distanceField');
-  field.hidden = prefs.mode === 'oneway';
+  field.hidden = prefs.mode !== 'loop';
   const slider = $('#f-km');
   const withVias = prefs.vias.some(isPoint);
   slider.min = withVias ? SHORTEST : 20;
@@ -379,7 +395,7 @@ function renderDistance() {
 
 function renderRider() {
   const s = SESSIONS[prefs.session];
-  const auto = s.climb === null || prefs.mode === 'oneway' ? null : Math.round(s.climb * prefs.km);
+  const auto = s.climb === null || prefs.mode !== 'loop' ? null : Math.round(s.climb * prefs.km);
   $('#f-ascent').placeholder = auto === null ? 'Libre' : `Auto · ${auto} m`;
   $('#riderNote').innerHTML = `Allure visée : <strong>${Math.round(rider().power)} W</strong> (${Math.round(s.ftp * 100)} % de votre FTP de ${profile.ftp} W)${
     profile.custom ? '' : ' — <button type="button" class="link" data-go="profile">renseignez votre profil</button>'
@@ -438,9 +454,15 @@ function readForm() {
   };
   document.querySelectorAll('[aria-invalid]').forEach(el => el.removeAttribute('aria-invalid'));
   if (!isPoint(prefs.start)) return fail($('[data-stop="start"] .stop__input'), 'Choisissez un point de départ.');
-  if (prefs.mode === 'oneway' && !isPoint(prefs.end)) return fail($('[data-stop="end"] .stop__input'), 'Choisissez une arrivée.');
+  if (needsEnd(prefs.mode) && !isPoint(prefs.end)) return fail($('[data-stop="end"] .stop__input'), 'Choisissez une arrivée.');
   const pending = prefs.vias.find(v => !isPoint(v));
   if (pending) return fail($(`[data-stop="${pending.id}"] .stop__input`), 'Choisissez un lieu dans la liste pour ce passage, ou retirez-le.');
+  if (prefs.mode === 'multi') {
+    // Pas de simulation de vent ni de dénivelé visé pour ce mode : distance, dénivelé
+    // et qualité de route sont lus par étape une fois l'itinéraire calculé.
+    const startTime = getStartTime() || new Date();
+    return { mode: prefs.mode, start: ll(prefs.start), end: ll(prefs.end), vias: prefs.vias.map(ll), km: null, ascent: null, startTime, quiet: prefs.quiet, days: prefs.days };
+  }
   const ascentRaw = num($('#f-ascent').value);
   if (ascentRaw !== null && (ascentRaw < 0 || ascentRaw > 6000)) {
     $('.more').open = true;
@@ -477,6 +499,14 @@ async function generate(event) {
   $('#submitBtn').disabled = true;
   setProgress(0, 1, 'Préparation…');
   try {
+    if (input.mode === 'multi') {
+      const trip = await planMultiDay({ ...input, onProgress: setProgress, signal: controller.signal });
+      result = { kind: 'multi', mode: 'multi', source: 'plan', trip, startNameLabel: prefs.start.name, endNameLabel: prefs.end.name };
+      $('#submitBtn').classList.remove('is-stale');
+      renderAll();
+      if (matchMedia('(max-width: 959px)').matches) $('.map-wrap').scrollIntoView({ behavior: 'smooth' });
+      return;
+    }
     const planned = await planRoute({ ...input, ...rider(), onProgress: setProgress, signal: controller.signal });
     if (!planned.routes.length) throw new Error('Aucun itinéraire trouvé.');
     planned.routes.forEach(r => (r.quiet = input.quiet));
@@ -544,6 +574,8 @@ async function refreshTime() {
 
 /* ---------- Rendu des résultats ---------- */
 function renderAll({ fit = true } = {}) {
+  if (result?.kind === 'multi') return renderMultiAll({ fit });
+  $('#forecast').hidden = false;
   renderForecast();
   const has = !!result?.routes.length;
   $('#results').hidden = !has;
@@ -551,9 +583,69 @@ function renderAll({ fit = true } = {}) {
     mapUi.clearRoutes();
     return;
   }
+  $('#options').hidden = false;
   renderOptions();
   renderDetail();
   mapUi.drawRoute(result.routes[selected], { fit });
+}
+
+/* ---------- Planification multi-jours (sans simulation de vent) ---------- */
+function renderMultiAll({ fit = true } = {}) {
+  $('#forecast').hidden = true;
+  $('#options').hidden = true;
+  $('#results').hidden = false;
+  renderMultiDetail();
+  mapUi.drawRoute({ coords: result.trip.coords }, { fit });
+}
+
+function renderMultiDetail() {
+  const t = result.trip;
+  const startName = esc(result.startNameLabel || 'Départ');
+  const endName = esc(result.endNameLabel || 'Arrivée');
+  const warnings = [];
+  if (t.roadProfile === false) warnings.push('Profil vélo de route indisponible sur le serveur : itinéraire calculé avec un profil BRouter standard, vérifiez les portions non asphaltées.');
+  $('#detail').innerHTML = `
+    <h3 class="detail__title">${startName} → ${endName}</h3>
+    <p class="detail__sub">${t.days.length} étapes · ${esc(QUIET_LEVELS[prefs.quiet]?.label || '')}</p>
+    <div class="stats">
+      <div class="stat"><strong>${fmtKm(t.meters)}</strong><span>Distance totale</span></div>
+      <div class="stat"><strong>${Math.round(t.ascent)} m</strong><span>Dénivelé positif total</span></div>
+      <div class="stat"><strong>${t.days.length}</strong><span>Jours</span></div>
+      <div class="stat"><strong>${fmtKm(t.meters / t.days.length)}</strong><span>Moyenne / jour</span></div>
+    </div>
+    ${warnings.length ? `<section class="block">${warnings.map(w => `<p class="warn">${icon('alert', 16)}<span>${esc(w)}</span></p>`).join('')}</section>` : ''}
+    <section class="block">
+      <h4 class="block__title">Étapes</h4>
+      <div class="options" role="list">
+        ${t.days
+          .map(
+            (d, i) => `<div class="option" role="listitem">
+              <span class="option__top"><span class="option__name">Jour ${i + 1}</span></span>
+              <span class="option__stats"><span>${fmtKm(d.meters)}</span><span>${Math.round(d.ascent)} m D+</span></span>
+              <button type="button" class="btn btn--soft btn--sm" data-action="stage-gpx" data-stage="${i}" style="margin-top:8px">${icon('download', 16)}<span>Export GPX étape ${i + 1}</span></button>
+            </div>`
+          )
+          .join('')}
+      </div>
+    </section>
+    <div class="actions">
+      <button type="button" class="btn btn--primary" data-action="trip-gpx">${icon('download')}<span>Exporter l’itinéraire complet (GPX)</span></button>
+      <p class="export-hint">Chaque étape peut aussi être exportée séparément pour votre GPS ou votre app (Komoot, Garmin, Wahoo).</p>
+    </div>`;
+}
+
+function exportTripGPX() {
+  const t = result.trip;
+  const name = `${result.startNameLabel || 'Départ'} → ${result.endNameLabel || 'Arrivée'} · ${Math.round(t.meters / 1000)} km`;
+  const fileName = `itineraire-${t.days.length}jours-${Math.round(t.meters / 1000)}km.gpx`;
+  shareOrDownloadFile(new File([toGPX(name, t.coords)], fileName, { type: 'application/gpx+xml' }), name);
+}
+
+function exportStageGPX(index) {
+  const t = result.trip;
+  const name = `Étape ${index + 1} · ${Math.round(t.days[index].meters / 1000)} km`;
+  const fileName = `etape-${index + 1}-${Math.round(t.days[index].meters / 1000)}km.gpx`;
+  shareOrDownloadFile(new File([stageGPX(t, index, 'Échappée')], fileName, { type: 'application/gpx+xml' }), name);
 }
 
 function renderForecast() {
@@ -737,25 +829,28 @@ function stravaLink(r) {
 }
 
 /* ---------- Export et favoris ---------- */
-async function exportGPX(r) {
-  const name = `${routeName(r)} · ${Math.round(r.meters / 1000)} km`;
-  const fileName = `parcours-${Math.round(r.meters / 1000)}km-${compass(r.heading ?? 0).toLowerCase()}.gpx`;
-  const file = new File([toGPX(name, r.coords)], fileName, { type: 'application/gpx+xml' });
+async function shareOrDownloadFile(file, title) {
   try {
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: name });
+      await navigator.share({ files: [file], title });
       return;
     }
   } catch (error) {
     if (error.name === 'AbortError') return;
   }
   const url = URL.createObjectURL(file);
-  const a = Object.assign(document.createElement('a'), { href: url, download: fileName });
+  const a = Object.assign(document.createElement('a'), { href: url, download: file.name });
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 10000);
   toast('Fichier GPX téléchargé');
+}
+
+async function exportGPX(r) {
+  const name = `${routeName(r)} · ${Math.round(r.meters / 1000)} km`;
+  const fileName = `parcours-${Math.round(r.meters / 1000)}km-${compass(r.heading ?? 0).toLowerCase()}.gpx`;
+  await shareOrDownloadFile(new File([toGPX(name, r.coords)], fileName, { type: 'application/gpx+xml' }), name);
 }
 
 function saveRoute(r) {
@@ -1101,6 +1196,14 @@ function init() {
     savePrefs();
     invalidateResult();
   });
+  $('#f-days')?.addEventListener('input', e => {
+    prefs.days = clampDays(e.target.value);
+    renderDays();
+  });
+  $('#f-days')?.addEventListener('change', () => {
+    savePrefs();
+    invalidateResult();
+  });
   $('#quietSwitch').addEventListener('click', e => {
     const b = e.target.closest('[data-quiet]');
     if (!b) return;
@@ -1142,6 +1245,11 @@ function init() {
   });
   $('#detail').addEventListener('click', e => {
     const action = e.target.closest('[data-action]')?.dataset.action;
+    if (result?.kind === 'multi') {
+      if (action === 'trip-gpx') exportTripGPX();
+      if (action === 'stage-gpx') exportStageGPX(Number(e.target.closest('[data-stage]').dataset.stage));
+      return;
+    }
     const r = result?.routes[selected];
     if (action === 'gpx') exportGPX(r);
     if (action === 'save') saveRoute(r);
@@ -1181,7 +1289,7 @@ function init() {
     getStart: () => (isPoint(prefs.start) ? ll(prefs.start) : null),
     onRide: col => {
       // Le col devient un point de passage de la prochaine sortie.
-      if (prefs.mode === 'oneway' && !isPoint(prefs.end)) setStopPoint('end', [col.lat, col.lon], col.name);
+      if (needsEnd(prefs.mode) && !isPoint(prefs.end)) setStopPoint('end', [col.lat, col.lon], col.name);
       else setStopPoint(addVia(), [col.lat, col.lon], col.name);
       renderDistance();
       showTab('ride');
