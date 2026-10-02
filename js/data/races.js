@@ -17,14 +17,14 @@ export const RACES = [
   // --- Régional : Franche-Comté / Jura ---
   {
     id: 'bisontine',
-    name: 'La Bisontine',
+    name: 'La Flèche Bisontine',
     group: 'regional',
     location: 'Besançon (Doubs)',
-    period: 'Mai, date 2027 non annoncée',
-    editions: [{ year: 2027, date: '2027-05-16', confirmed: false }, { year: 2028, date: '2028-05-14', confirmed: false }],
-    distance: '132 / 103 / 80 / 76 / 49 km',
-    notes: '',
-    link: 'https://fr.milesrepublic.com/cyclotourisme/doubs'
+    period: 'Fin avril, date 2027 non annoncée (édition 2026 les 25-26 avril)',
+    editions: [{ year: 2027, date: '2027-04-25', confirmed: false }, { year: 2028, date: '2028-04-23', confirmed: false }],
+    distance: '130 et 90 km (boucle unique)',
+    notes: 'Anciennement listée ici sous le nom générique « La Bisontine » : nom et distances corrigés d’après la fiche officielle (finishers.com).',
+    link: 'https://www.laflechebisontine.fr/'
   },
   {
     id: 'cyclomontagnarde-jura',
@@ -34,7 +34,7 @@ export const RACES = [
     period: 'Juin, date 2027 non annoncée (édition 2026 le 20 juin)',
     editions: [{ year: 2027, date: '2027-06-19', confirmed: false }, { year: 2028, date: '2028-06-17', confirmed: false }],
     distance: 'Plusieurs distances cyclo',
-    notes: '',
+    notes: '⚠️ Source peu précise : à vérifier que ce n’est pas un autre nom pour la Cyclosportive La Vache qui rit (même secteur, Lons-le-Saunier).',
     link: 'https://ffvelo.fr/evenements/cyclomontagnarde-du-jura-2026/'
   },
   {
@@ -58,6 +58,83 @@ export const RACES = [
     distance: '13 et 8,5 km (format local, dénivelé concentré)',
     notes: '',
     link: 'https://fr.milesrepublic.com/cyclotourisme/doubs'
+  },
+  {
+    id: 'vache-qui-rit',
+    name: 'Cyclosportive La Vache qui rit',
+    group: 'regional',
+    location: 'Lons-le-Saunier (Jura)',
+    period: 'Fin mai, date 2027 non annoncée (édition 2026 les 30-31 mai)',
+    editions: [{ year: 2027, date: '2027-05-30', confirmed: false }, { year: 2028, date: '2028-05-28', confirmed: false }],
+    distance: '35 / 58 / 78 / 103 / 114 / 156 km, route et gravel',
+    notes: '',
+    link: 'https://cyclosportive-lavachequirit.fr/'
+  },
+  {
+    id: 'transju-cyclo',
+    name: 'Transju’Cyclo',
+    group: 'regional',
+    location: 'Lamoura → Les Rousses (Jura)',
+    period: 'Début septembre, date 2027 non annoncée (édition 2026 les 5-6 septembre)',
+    editions: [{ year: 2027, date: '2027-09-04', confirmed: false }, { year: 2028, date: '2028-09-02', confirmed: false }],
+    distance: 'Route (détail à confirmer sur le site)',
+    notes: 'Organisée par le même comité que la Transjurassienne (ski de fond, voir l’app Trace).',
+    link: 'https://www.finishers.com/en/event/transju-cyclo'
+  },
+  {
+    id: 'louis-pasteur',
+    name: 'La Louis Pasteur',
+    group: 'regional',
+    location: 'Dole (Jura)',
+    period: 'Fin juin, date 2027 non annoncée',
+    editions: [{ year: 2027, date: '2027-06-27', confirmed: false }, { year: 2028, date: '2028-06-25', confirmed: false }],
+    distance: '70 km (boucle unique)',
+    notes: 'Organisée par le Vélo Club Dolois.',
+    link: 'https://www.veloclubdolois.com/'
+  },
+  {
+    id: 'gentleman-arinthod',
+    name: 'Le Gentleman d’Arinthod',
+    group: 'regional',
+    location: 'Arinthod (Jura)',
+    period: 'Fin août, date 2027 non annoncée (édition 2026 le 30 août)',
+    editions: [{ year: 2027, date: '2027-08-29', confirmed: false }, { year: 2028, date: '2028-08-27', confirmed: false }],
+    distance: '34 km en duo (boucle unique), 300 m D+',
+    notes: 'Format gentleman (par équipe de 2). Organisé par le SC Arinthod.',
+    link: 'https://scarinthod.jimdofree.com/gentleman-d-arinthod/'
+  },
+  {
+    id: 'grand-braquet-rupt',
+    name: 'GBR · Le Grand Braquet du Rupt',
+    group: 'regional',
+    location: 'Sainte-Marie (Doubs)',
+    period: 'Mi-septembre, date 2027 non annoncée (édition 2026 le 13 septembre)',
+    editions: [{ year: 2027, date: '2027-09-12', confirmed: false }, { year: 2028, date: '2028-09-10', confirmed: false }],
+    distance: '48 km (gravel) / 93 et 152 km (route)',
+    notes: '',
+    link: 'https://www.finishers.com/en/event/gbr-the-great-braquet-of-rupt'
+  },
+  {
+    id: 'roller-coaster-luxeuil',
+    name: 'Roller Coaster · Luxeuil Vosges du Sud',
+    group: 'regional',
+    location: 'Luxeuil-les-Bains (Haute-Saône)',
+    period: 'Juin, date 2027 non annoncée',
+    editions: [{ year: 2027, date: '2027-06-13', confirmed: false }, { year: 2028, date: '2028-06-11', confirmed: false }],
+    distance: '62 / 115 / 195 km',
+    notes: '',
+    link: 'https://www.finishers.com/en/event/roller-coaster-luxeuil-southern-vosges'
+  },
+  {
+    id: 'climbing-for-life',
+    name: 'Climbing For Life',
+    group: 'regional',
+    location: 'Belfort (Territoire de Belfort)',
+    period: 'Mi-août, date 2027 non annoncée',
+    editions: [{ year: 2027, date: '2027-08-15', confirmed: false }, { year: 2028, date: '2028-08-13', confirmed: false }],
+    distance: '36 / 61 / 81 / 108 / 116 km',
+    notes: '',
+    link: 'https://www.finishers.com/en/event/climbing-for-life'
   },
 
   // --- Alpes & Provence ---
@@ -215,8 +292,8 @@ export const RACES = [
     location: 'Ronchamp (Vosges)',
     period: 'Juin, date 2027 non annoncée',
     editions: [{ year: 2027, date: '2027-06-13', confirmed: false }, { year: 2028, date: '2028-06-11', confirmed: false }],
-    distance: 'Granfondo 178 km / Médiofondo 93 km',
-    notes: 'Dénivelé : 4020 m (Granfondo) / 2200 m (Médiofondo).',
+    distance: 'Granfondo 183 km / Médiofondo 95 km',
+    notes: 'Dénivelé : environ 4000 m (Granfondo) / 2200 m (Médiofondo), à confirmer selon le tracé de l’édition.',
     link: 'https://www.jds.fr/belfort/sports/cyclosportives/3-ballons-santini-281508_A'
   },
   {
