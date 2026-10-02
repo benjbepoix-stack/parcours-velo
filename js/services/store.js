@@ -57,8 +57,15 @@ export const loadDone = () => {
 };
 export const saveDone = done => write('pv_cols_done', done);
 
+/* Courses déjà envoyées au planning de Carnet : [idDeCourse, ...] */
+export const loadRacesAdded = () => {
+  const list = read('pv_races_added', []);
+  return Array.isArray(list) ? list : [];
+};
+export const saveRacesAdded = list => write('pv_races_added', list);
+
 /* ---------- Sauvegarde / restauration (fichier JSON) ---------- */
-const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme'];
+const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme', 'pv_races_added'];
 
 /** Toutes les données de l'app, telles qu'enregistrées (texte brut par clé). */
 export function exportBackup() {

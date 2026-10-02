@@ -36,6 +36,7 @@
         <button type="button" role="tab" id="tab-ride" aria-controls="pane-ride" aria-selected="true" data-tab="ride">Sortie</button>
         <button type="button" role="tab" id="tab-cols" aria-controls="pane-cols" aria-selected="false" data-tab="cols">Cols</button>
         <button type="button" role="tab" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved">Favoris <span class="count" id="savedCount"></span></button>
+        <button type="button" role="tab" id="tab-races" aria-controls="pane-races" aria-selected="false" data-tab="races">Courses</button>
         <button type="button" role="tab" id="tab-profile" aria-controls="pane-profile" aria-selected="false" data-tab="profile">Profil</button>
       </div>
 
@@ -150,6 +151,17 @@
         <div id="savedList" class="saved-list"></div>
       </section>
 
+      <!-- ============ COURSES ============ -->
+      <section class="pane" id="pane-races" role="tabpanel" aria-labelledby="tab-races" hidden>
+        <p class="hint">Sélection curatée, mise à jour à la main · dates à vérifier avant d’ajouter. « Ajouter » envoie la course directement dans le planning de l’app Carnet.</p>
+        <div class="segmented segmented--three" id="racesGroups" role="radiogroup" aria-label="Catégorie de courses">
+          <button type="button" role="radio" data-race-group="all" aria-checked="true">Toutes</button>
+          <button type="button" role="radio" data-race-group="regional" aria-checked="false">Franche-Comté</button>
+          <button type="button" role="radio" data-race-group="national" aria-checked="false">Classiques</button>
+        </div>
+        <div id="racesList"></div>
+      </section>
+
       <!-- ============ PROFIL ============ -->
       <section class="pane" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
         <form class="form" id="profileForm" novalidate>
@@ -190,6 +202,11 @@
           <p class="hint">La heatmap Strava n’a pas d’accès public : un lien l’ouvre centrée sur votre boucle pour vérifier que les routes sont fréquentées par les cyclistes.</p>
         </div>
       </section>
+
+      <div class="races-bar" id="racesBar" hidden>
+        <span id="racesBarCount"></span>
+        <button type="button" class="btn btn--primary btn--sm" id="racesBarAdd">Ajouter au planning</button>
+      </div>
 
       <footer class="credits">Échappée · itinéraires BRouter · cartes © OpenStreetMap, Esri, CyclOSM · météo Open-Meteo · lieux Photon</footer>
     </aside>

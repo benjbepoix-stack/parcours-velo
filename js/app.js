@@ -11,6 +11,7 @@ import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
 import { initCols, setColsActive } from './ui/cols.js';
+import { initRaces, renderRaces } from './ui/races.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -83,8 +84,9 @@ function applyTheme(theme) {
 /* ---------- Onglets ---------- */
 function showTab(name) {
   document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
-  ['ride', 'cols', 'saved', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
+  ['ride', 'cols', 'saved', 'races', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
   if (name === 'saved') renderSaved();
+  if (name === 'races') renderRaces();
   setColsActive(name === 'cols');
 }
 
@@ -1302,6 +1304,8 @@ function init() {
       );
     }
   });
+
+  initRaces({ toast });
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }
