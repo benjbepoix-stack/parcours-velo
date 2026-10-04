@@ -71,8 +71,8 @@ async function addOne(card, { silent = false } = {}) {
   }
   try {
     // Carnet attend un nombre de km pour « distance » (plusieurs formats possibles ici) :
-    // laissé vide pour que vous le précisiez une fois le format choisi ; le détail reste en note.
-    await addRaceToCarnet({ name: r.name, sport: 'Cyclisme', date, location: r.location, notes: [`Distances : ${r.distance}`, r.notes, r.link].filter(Boolean).join(' — ') });
+    // laissé vide pour que vous le précisiez une fois le format choisi.
+    await addRaceToCarnet({ name: r.name, sport: 'Cyclisme', date, location: r.location });
     added.add(addedKey(id, edition.year));
     saveAdded();
     card.querySelector('[data-race-check]').checked = false;
