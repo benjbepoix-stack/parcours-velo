@@ -1002,7 +1002,7 @@ function shortDate(key) {
 function applyCarnetSyncUI() {
   const btn = $('#carnetSyncToggle');
   btn.setAttribute('aria-pressed', String(carnetSync));
-  btn.querySelector('span').textContent = carnetSync ? 'Lié à Carnet ✓' : 'Lier à Carnet';
+  btn.querySelector('span').textContent = carnetSync ? 'Synchronisé ✓' : 'Synchroniser mes mesures';
 }
 
 /**

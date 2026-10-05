@@ -51,7 +51,7 @@ Une course déjà ajoutée est mise en évidence (fond et liseré teintés) et s
 
 ## Liaison FTP / poids avec Carnet
 
-Dans l'onglet **Profil**, le bouton **« Lier à Carnet »** reprend automatiquement le FTP et le poids depuis les dernières valeurs enregistrées dans l'app **Carnet** (Mon tableau de bord), onglet Mesures — lecture seule, même base Firebase partagée que les autres liaisons entre ces apps.
+Dans l'onglet **Profil**, le bouton **« Synchroniser mes mesures »** reprend automatiquement le FTP et le poids depuis les dernières valeurs enregistrées dans l'app **Carnet** (Mon tableau de bord), onglet Mesures — lecture seule, même base Firebase partagée que les autres liaisons entre ces apps. Le bouton reste volontairement générique (il ne nomme pas Carnet) : il parlera à tout le monde, y compris à qui n'utilise pas cette app.
 
 - **Réglage strictement local, désactivé par défaut** : c'est un choix par appareil, jamais imposé. Une personne qui partage cette app sans utiliser Carnet n'est donc jamais concernée — elle continue à saisir son FTP et son poids à la main, comme avant.
 - Une fois activé, les champs se mettent à jour à l'ouverture de l'app et à chaque passage sur l'onglet Profil. **La saisie manuelle reste toujours possible** : si Carnet n'a encore aucune valeur enregistrée, ou est injoignable (hors ligne), les champs gardent leur dernière valeur et un message l'indique — rien n'est écrasé par une absence de donnée.
