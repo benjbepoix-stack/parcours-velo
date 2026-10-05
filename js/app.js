@@ -1,5 +1,5 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
-import { RELIEF, ZONES, estimateDuration, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
+import { RELIEF, ZONES, zoneRange, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
 import { planMultiDay, clampDays, stageGPX, MIN_DAYS, MAX_DAYS } from './core/trip.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
@@ -443,22 +443,23 @@ function renderDistance() {
   renderRider();
 }
 
-/** Allure : zones Z1 à Z4 en % de la FTP, avec puissance et durée estimée pour la sortie réglée. */
+/** Allure : zones Z1 à Z4 en % de la FTP, avec fourchette de durée et de vitesse pour la sortie réglée. */
 function renderRider() {
   const ftp = profile.ftp;
   const mass = profile.weight + profile.bike;
   const km = prefs.mode === 'loop' ? prefs.km : null;
   const ascent = prefs.relief === 'free' && num(prefs.ascent) !== null ? num(prefs.ascent) : km ? km * (RELIEF[prefs.relief]?.climb ?? 9) : 0;
+  const speeds = r => `${Math.round(r.vmin)}–${Math.round(r.vmax)} km/h`;
   $('#zoneSwitch').innerHTML = Object.entries(ZONES)
     .map(([k, z]) => {
-      const t = km ? estimateDuration(km, ascent, ftp * z.ftp, mass, profile.cda) : null;
-      return `<button type="button" role="radio" data-zone="${k}" aria-checked="${k === prefs.zone}"><strong>${z.label}</strong><small>${t ? fmtDur(t) : esc(z.name)}</small></button>`;
+      const r = km ? zoneRange(z, ftp, km, ascent, mass, profile.cda) : null;
+      return `<button type="button" role="radio" data-zone="${k}" aria-checked="${k === prefs.zone}"><strong>${z.label}</strong><small>${r ? speeds(r) : esc(z.name)}</small></button>`;
     })
     .join('');
   const z = ZONES[prefs.zone];
-  const t = km ? estimateDuration(km, ascent, ftp * z.ftp, mass, profile.cda) : null;
-  $('#riderNote').innerHTML = `<strong>${z.label} · ${esc(z.name)}</strong> : ${Math.round(ftp * z.min)}–${Math.round(ftp * z.max)} W (${Math.round(z.min * 100)}–${Math.round(z.max * 100)} % de votre FTP de ${ftp} W), simulée à <strong>${Math.round(ftp * z.ftp)} W</strong>${
-    t ? `. Environ <strong>${fmtDur(t)}</strong> pour ${km} km et ~${Math.round(ascent)} m D+ (avant vent et tracé exact)` : ''
+  const r = km ? zoneRange(z, ftp, km, ascent, mass, profile.cda) : null;
+  $('#riderNote').innerHTML = `<strong>${z.label} · ${esc(z.name)}</strong> : ${Math.round(ftp * z.min)}–${Math.round(ftp * z.max)} W (${Math.round(z.min * 100)}–${Math.round(z.max * 100)} % de votre FTP de ${ftp} W)${
+    r ? `. Pour ${km} km et ~${Math.round(ascent)} m D+ : <strong>${fmtDur(r.fast)} à ${fmtDur(r.slow)}</strong>, soit <strong>${speeds(r)}</strong> de moyenne (avant vent et tracé exact ; le calcul des boucles roule à ${Math.round(ftp * z.ftp)} W)` : ''
   }${profile.custom ? '' : ' — <button type="button" class="link" data-go="profile">renseignez votre profil</button>'}.`;
 }
 

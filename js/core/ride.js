@@ -81,14 +81,23 @@ export const RIDE_FTP = ZONES.z2.ftp;
 
 /**
  * Durée estimée (s) avant calcul du parcours : distance à plat à la puissance donnée,
- * plus le temps de montée du dénivelé (énergie potentielle, rendement ~ 85 % de la puissance utile en côte).
+ * plus un surcoût de montée (un quart du temps nécessaire pour élever la masse du
+ * dénivelé à cette puissance : le reste est compensé par les descentes).
+ * Calibré sur des sorties réelles (~27 km/h en Z2 pour 80 km et 720 m D+).
  */
 export function estimateDuration(km, ascent, power, mass, cda = CDA) {
   if (!km || !power) return null;
   const flat = (km * 1000) / speedFor(power, 0, 0, mass, cda);
-  const climb = ascent > 0 ? (mass * 9.81 * ascent) / (power * 0.85) : 0;
-  // En montée on va moins vite qu'à plat sur la même distance : on n'ajoute que l'écart.
-  return flat + climb * 0.75;
+  const climb = ascent > 0 ? (mass * G * ascent) / power : 0;
+  return flat + climb * 0.25;
+}
+
+/** Fourchette pour une zone : bas de zone (lent) → haut de zone (rapide), en secondes et km/h. */
+export function zoneRange(zone, ftp, km, ascent, mass, cda = CDA) {
+  const slow = estimateDuration(km, ascent, ftp * zone.min, mass, cda);
+  const fast = estimateDuration(km, ascent, ftp * zone.max, mass, cda);
+  if (!slow || !fast) return null;
+  return { slow, fast, vmin: km / (slow / 3600), vmax: km / (fast / 3600) };
 }
 
 /** Profils BRouter : du plus direct au plus tranquille. */
@@ -144,7 +153,7 @@ export const CDA = 0.36; // mains aux cocottes, tenue d'entraînement
 const CRR = 0.0055; // pneus route, bitume de campagne
 const VMAX_DESCENT = 14; // 50 km/h : plafond de sécurité en descente
 /** Virages, carrefours, relances : temps réel un peu supérieur au modèle. */
-const ROAD_OVERHEAD = 1.05;
+const ROAD_OVERHEAD = 1.02;
 /** Le vent est mesuré à 10 m : au niveau du cycliste il est plus faible. */
 export const WIND_HEIGHT_FACTOR = 0.65;
 
@@ -229,8 +238,10 @@ export function simulate(coords, { power, mass, startTime, wind, cda = CDA }) {
     const heading = bearing(coords[i - 1], coords[i]);
     const w = windAt(wind, clock);
     const head = headwindComponent(w.speed * WIND_HEIGHT_FACTOR, w.dir, heading);
-    const v = speedFor(power, grade, head / 3.6, mass, cda);
-    const v0 = speedFor(power, grade, 0, mass, cda);
+    // En côte, on pousse naturellement plus fort que l'allure moyenne (jusqu'à +20 % à 8 %).
+    const p = power * (1 + Math.min(Math.max(grade, 0), 0.08) * 2.5);
+    const v = speedFor(p, grade, head / 3.6, mass, cda);
+    const v0 = speedFor(p, grade, 0, mass, cda);
     const dt = (len / v) * ROAD_OVERHEAD;
     segs.push({ i, d0: dist, d1: dist + len, heading, grade, head, time: clock, speed: v * 3.6 });
     clock += dt * 1000;
