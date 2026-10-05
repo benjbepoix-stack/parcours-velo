@@ -60,6 +60,11 @@ assign onewaypenalty =
        if badoneway then ( if oneway:bicycle=no then 0 else if cycleway=opposite|opposite_lane|opposite_track then 0 else 10000 )
        else 0
 
+/* Pénalité de trafic par classe (OSM estimated_traffic_class, mesure réelle du trafic,
+   pas la taille de la commune) : relevée aux deux échelons les plus chargés — quasi
+   jamais atteints par une rue de village, presque toujours par un centre de grande
+   ville (type Besançon) — pour s'en écarter plus franchement sans toucher aux petites
+   routes traversant un village, qui restent en classe basse. */
 assign trafficpenalty0 =
   if consider_traffic then
   (
@@ -67,24 +72,24 @@ assign trafficpenalty0 =
     (
       if estimated_traffic_class=1|2 then 0.3
       else if estimated_traffic_class=3 then 0.6
-      else if estimated_traffic_class=4 then 1
-      else if estimated_traffic_class=5 then 1.5
-      else if estimated_traffic_class=6|7 then 2
+      else if estimated_traffic_class=4 then 1.4
+      else if estimated_traffic_class=5 then 2.2
+      else if estimated_traffic_class=6|7 then 3.2
       else 0.6
     )
     else if highway=secondary|secondary_link then
     (
       if estimated_traffic_class=3 then 0.3
-      else if estimated_traffic_class=4 then 0.6
-      else if estimated_traffic_class=5 then 1
-      else if estimated_traffic_class=6|7 then 1.5
+      else if estimated_traffic_class=4 then 0.9
+      else if estimated_traffic_class=5 then 1.6
+      else if estimated_traffic_class=6|7 then 2.4
       else 0.1
     )
     else if highway=tertiary|tertiary_link then
     (
       if estimated_traffic_class=3 then 0.2
-      else if estimated_traffic_class=4 then 0.4
-      else if estimated_traffic_class=5|6|7 then 0.8
+      else if estimated_traffic_class=4 then 0.6
+      else if estimated_traffic_class=5|6|7 then 1.4
       else 0
     )
     else 0

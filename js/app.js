@@ -228,7 +228,10 @@ function onStopInput(e) {
   suggestTimer = setTimeout(async () => {
     suggestAbort = new AbortController();
     try {
-      const near = isPoint(prefs.start) ? ll(prefs.start) : null;
+      // Pas de biais de proximité pour le départ lui-même : le chercher « près de
+      // l'ancien départ » empêchait de trouver une ville de départ éloignée
+      // (ex. changer de région) — aucune proposition n'apparaissait alors.
+      const near = id !== 'start' && isPoint(prefs.start) ? ll(prefs.start) : null;
       const hits = await suggest(q, near, suggestAbort.signal);
       const box = li.querySelector('.suggest');
       if (!box || !li.isConnected) return;
