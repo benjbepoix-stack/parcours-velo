@@ -1,5 +1,5 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
-import { SESSIONS, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
+import { RELIEF, RIDE_FTP, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
 import { planMultiDay, clampDays, stageGPX, MIN_DAYS, MAX_DAYS } from './core/trip.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
@@ -36,17 +36,20 @@ const needsEnd = mode => mode === 'oneway' || mode === 'multi';
 
 /* ---------- Préférences (avec migration de l'ancien format) ---------- */
 const DEFAULT_START = { lat: 47.2378, lon: 6.0241, name: 'Besançon' };
-const prefs = store.loadPrefs({ mode: 'loop', session: 'endurance', km: SESSIONS.endurance.km, ascent: '', quiet: 'quiet', start: DEFAULT_START, end: null, vias: [], days: 3 });
+const prefs = store.loadPrefs({ mode: 'loop', relief: 'any', km: 80, ascent: '', quiet: 'quiet', start: DEFAULT_START, end: null, vias: [], days: 3 });
 if (Array.isArray(prefs.start)) prefs.start = { lat: prefs.start[0], lon: prefs.start[1], name: prefs.startName || null };
 delete prefs.startName;
 if (!isPoint(prefs.start)) prefs.start = { ...DEFAULT_START };
-if (!SESSIONS[prefs.session]) prefs.session = 'endurance';
+// Ancien réglage « séance » → préférence de dénivelé (Côtes → Vallonné, Récupération → Plat, Libre → Libre).
+if (!prefs.relief && prefs.session) prefs.relief = { climbing: 'hilly', recovery: 'flat', free: prefs.ascent ? 'free' : 'any' }[prefs.session] || 'any';
+delete prefs.session;
+if (!RELIEF[prefs.relief] && prefs.relief !== 'free') prefs.relief = 'any';
 if (!QUIET_LEVELS[prefs.quiet]) prefs.quiet = 'quiet';
 if (!['loop', 'oneway', 'multi'].includes(prefs.mode)) prefs.mode = 'loop';
 if (!isPoint(prefs.end)) prefs.end = null;
 prefs.days = clampDays(prefs.days);
 prefs.vias = Array.isArray(prefs.vias) ? prefs.vias.filter(isPoint).map(v => ({ ...v, id: v.id || uid() })) : [];
-prefs.km = Math.min(200, Math.max(20, Number(prefs.km) || SESSIONS[prefs.session].km));
+prefs.km = Math.min(200, Math.max(20, Number(prefs.km) || 80));
 const savePrefs = () => store.savePrefs(prefs);
 
 let profile = store.loadProfile();
@@ -68,7 +71,7 @@ function toast(message, { error = false } = {}) {
 }
 
 const rider = () => ({
-  power: profile.ftp * SESSIONS[prefs.session].ftp,
+  power: profile.ftp * RIDE_FTP,
   mass: profile.weight + profile.bike,
   cda: profile.cda
 });
@@ -91,7 +94,13 @@ function showTab(name) {
     const active = b.dataset.tab === name;
     b.setAttribute(b.getAttribute('role') === 'tab' ? 'aria-selected' : 'aria-pressed', String(active));
   });
+  const previous = ['ride', 'cols', 'saved', 'races', 'profile'].find(t => !$(`#pane-${t}`).hidden);
   ['ride', 'cols', 'saved', 'races', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
+  // Téléphone : en changeant d'onglet depuis le bas de la page, on revient au début du panneau.
+  if (previous !== name && matchMedia('(max-width: 959px)').matches) {
+    const top = $('#panel').getBoundingClientRect().top + window.scrollY;
+    if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' });
+  }
   if (name === 'saved') renderSaved();
   if (name === 'races') renderRaces();
   if (name === 'profile') syncFromCarnet({ silent: true });
@@ -350,6 +359,8 @@ function renderMode() {
   $('#submitLabel').textContent = prefs.mode === 'loop' ? 'Trouver mes boucles' : prefs.mode === 'multi' ? 'Planifier mon itinéraire' : 'Trouver mon itinéraire';
   renderDistance();
   renderDays();
+  // Plusieurs jours : pas de préférence de dénivelé (itinéraire découpé tel quel).
+  $('#reliefStep').hidden = prefs.mode === 'multi';
 }
 
 function setMode(mode) {
@@ -377,22 +388,32 @@ function renderDays() {
   $('#f-days').max = MAX_DAYS;
 }
 
-function renderSessions() {
-  $('#sessionChips').innerHTML = Object.entries(SESSIONS)
-    .map(([k, s]) => `<button type="button" class="chip" role="radio" data-session="${k}" aria-checked="${k === prefs.session}">${esc(s.label)}</button>`)
+/** Dénivelé : N'importe / Plat / Vallonné (façon Strava), ou « Libre » avec un dénivelé chiffré. */
+function renderRelief() {
+  const free = prefs.relief === 'free';
+  $('#reliefOptions').hidden = free;
+  $('#reliefInput').hidden = !free;
+  $('#reliefFree').setAttribute('aria-pressed', String(free));
+  $('#reliefOptions').innerHTML = Object.entries(RELIEF)
+    .map(
+      ([k, r]) => `<button type="button" class="relief__option" role="radio" data-relief="${k}" aria-checked="${k === prefs.relief}">
+        <span class="relief__text"><span class="relief__title">${esc(r.label)}</span><span class="relief__hint">${esc(r.hint)}</span></span>
+        <span class="relief__radio" aria-hidden="true"></span>
+      </button>`
+    )
     .join('');
-  $('#sessionHint').textContent = SESSIONS[prefs.session].hint;
 }
 
 /** Curseur : 15 = « au plus court » quand il y a des passages. */
 const SHORTEST = 15;
+const reliefLabel = () => (prefs.relief === 'free' ? (prefs.ascent ? `Dénivelé libre · ${prefs.ascent} m` : 'Dénivelé libre') : `Dénivelé : ${RELIEF[prefs.relief].label.toLowerCase()}`);
 function renderDistance() {
   const field = $('#distanceField');
   field.hidden = prefs.mode !== 'loop';
   const slider = $('#f-km');
   const withVias = prefs.vias.some(isPoint);
   slider.min = withVias ? SHORTEST : 20;
-  if (!withVias && prefs.km < 20) prefs.km = SESSIONS[prefs.session].km;
+  if (!withVias && prefs.km < 20) prefs.km = 80;
   slider.value = prefs.km;
   const shortest = withVias && prefs.km <= SHORTEST;
   $('#kmOut').textContent = shortest ? 'Au plus court' : `${prefs.km} km`;
@@ -407,10 +428,7 @@ function renderDistance() {
 }
 
 function renderRider() {
-  const s = SESSIONS[prefs.session];
-  const auto = s.climb === null || prefs.mode !== 'loop' ? null : Math.round(s.climb * prefs.km);
-  $('#f-ascent').placeholder = auto === null ? 'Libre' : `Auto · ${auto} m`;
-  $('#riderNote').innerHTML = `Allure visée : <strong>${Math.round(rider().power)} W</strong> (${Math.round(s.ftp * 100)} % de votre FTP de ${profile.ftp} W)${
+  $('#riderNote').innerHTML = `Allure visée : <strong>${Math.round(rider().power)} W</strong> (${Math.round(RIDE_FTP * 100)} % de votre FTP de ${profile.ftp} W, rythme d’endurance)${
     profile.custom ? '' : ' — <button type="button" class="link" data-go="profile">renseignez votre profil</button>'
   }.`;
 }
@@ -476,9 +494,9 @@ function readForm() {
     const startTime = getStartTime() || new Date();
     return { mode: prefs.mode, start: ll(prefs.start), end: ll(prefs.end), vias: prefs.vias.map(ll), km: null, ascent: null, startTime, quiet: prefs.quiet, days: prefs.days };
   }
-  const ascentRaw = num($('#f-ascent').value);
+  const free = prefs.relief === 'free';
+  const ascentRaw = free ? num($('#f-ascent').value) : null;
   if (ascentRaw !== null && (ascentRaw < 0 || ascentRaw > 6000)) {
-    $('.more').open = true;
     return fail($('#f-ascent'), 'Indiquez un dénivelé entre 0 et 6000 m, ou laissez vide.');
   }
   const startTime = getStartTime();
@@ -487,9 +505,9 @@ function readForm() {
   const vias = prefs.vias.map(ll);
   const shortest = vias.length && prefs.km <= SHORTEST;
   const km = prefs.mode === 'oneway' || shortest ? null : prefs.km;
-  const s = SESSIONS[prefs.session];
-  const ascent = ascentRaw ?? (s.climb === null || !km ? null : Math.round(s.climb * km));
-  return { mode: prefs.mode, start: ll(prefs.start), end: prefs.end ? ll(prefs.end) : null, vias, km, ascent, startTime, quiet: prefs.quiet };
+  // Libre : dénivelé chiffré (ou aucun objectif si vide) ; sinon préférence de relief.
+  const relief = free ? 'any' : prefs.relief;
+  return { mode: prefs.mode, start: ll(prefs.start), end: prefs.end ? ll(prefs.end) : null, vias, km, ascent: ascentRaw, relief, startTime, quiet: prefs.quiet };
 }
 
 function setProgress(done, total, label) {
@@ -769,7 +787,7 @@ function renderDetail() {
 
   $('#detail').innerHTML = `
     <h3 class="detail__title">${esc(routeName(r))}</h3>
-    <p class="detail__sub">${esc(SESSIONS[prefs.session].label)} · départ ${hhmm(result.startTime)} · ${result.loop === false ? 'arrivée' : 'retour'} vers ${hLabel(back)}${r.subtitle ? ` · ${esc(r.subtitle.toLowerCase())}` : ''}</p>
+    <p class="detail__sub">${esc(reliefLabel())} · départ ${hhmm(result.startTime)} · ${result.loop === false ? 'arrivée' : 'retour'} vers ${hLabel(back)}${r.subtitle ? ` · ${esc(r.subtitle.toLowerCase())}` : ''}</p>
     <div class="stats">
       <div class="stat"><strong>${fmtKm(r.meters)}</strong><span>Distance</span></div>
       <div class="stat"><strong>${Math.round(r.ascent)} m</strong><span>Dénivelé positif</span></div>
@@ -876,7 +894,7 @@ function saveRoute(r) {
     startName: prefs.start.name,
     mode: result.mode || 'loop',
     loop: result.loop !== false,
-    session: prefs.session,
+    relief: prefs.relief,
     heading: r.heading,
     meters: Math.round(r.meters),
     ascent: Math.round(r.ascent),
@@ -929,8 +947,8 @@ async function openSaved(item) {
     const wind = await fetchWind(item.start[0], item.start[1], startTime);
     const t0 = startTime.getTime();
     const r = { ...item, coords: item.coords, name: item.name, savedId: item.id };
-    prefs.session = SESSIONS[item.session] ? item.session : prefs.session;
-    renderSessions();
+    if (RELIEF[item.relief] || item.relief === 'free') prefs.relief = item.relief;
+    renderRelief();
     renderRider();
     result = { routes: [r], wind, windNow: wind.reduce((b, h) => (Math.abs(h.t - t0) < Math.abs(b.t - t0) ? h : b), wind[0]), startTime, target: { km: item.meters / 1000, ascent: null }, source: 'saved', loop: item.loop !== false, kind: item.loop === false ? 'oneway' : 'free' };
     resimulate(result.routes, startTime, wind);
@@ -1183,7 +1201,7 @@ function init() {
   initWhen();
   renderMode();
   renderStops();
-  renderSessions();
+  renderRelief();
   renderQuiet();
   renderDistance();
   fillProfile();
@@ -1237,16 +1255,29 @@ function init() {
     $(`[data-stop="${id}"] .stop__input`)?.focus();
   });
   $('#mapBannerCancel').addEventListener('click', stopPicking);
-  $('#sessionChips').addEventListener('click', e => {
-    const chip = e.target.closest('[data-session]');
-    if (!chip) return;
-    const previous = SESSIONS[prefs.session];
-    prefs.session = chip.dataset.session;
-    // La distance suit la séance tant qu'elle n'a pas été personnalisée.
-    if (prefs.km === previous.km) prefs.km = SESSIONS[prefs.session].km;
+  $('#reliefOptions').addEventListener('click', e => {
+    const opt = e.target.closest('[data-relief]');
+    if (!opt || opt.dataset.relief === prefs.relief) return;
+    prefs.relief = opt.dataset.relief;
     savePrefs();
-    renderSessions();
-    renderDistance();
+    renderRelief();
+    invalidateResult();
+  });
+  $('#reliefFree').addEventListener('click', () => {
+    // Bascule « Libre » ↔ préférences : on retrouve celle choisie avant de passer en libre.
+    if (prefs.relief === 'free') prefs.relief = RELIEF[prefs.reliefBack] ? prefs.reliefBack : 'any';
+    else {
+      prefs.reliefBack = prefs.relief;
+      prefs.relief = 'free';
+    }
+    savePrefs();
+    renderRelief();
+    invalidateResult();
+    if (prefs.relief === 'free') $('#f-ascent').focus();
+  });
+  $('#f-ascent').addEventListener('change', () => {
+    prefs.ascent = $('#f-ascent').value.trim();
+    savePrefs();
     invalidateResult();
   });
   $('#f-km').addEventListener('input', e => {

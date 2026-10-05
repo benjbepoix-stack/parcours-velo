@@ -11,7 +11,8 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 let added = new Set(store.loadRacesAdded());
 const saveAdded = () => store.saveRacesAdded([...added]);
 
-const view = { group: 'all', yearIdx: 0 };
+const view = { group: 'all', yearIdx: 0, query: '' };
+const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 let toast = () => {};
 
 function addedKey(raceId, year) {
@@ -36,7 +37,7 @@ function raceCard(r) {
     <div class="race__actions">
       <input type="date" class="input race__date" data-race-date value="${esc(edition.date)}" aria-label="Date de l'édition ${edition.year} pour ${esc(r.name)}">
       <button type="button" class="btn btn--soft btn--sm" data-race-action="add" ${isAdded ? 'disabled' : ''}>${icon(isAdded ? 'check' : 'plus', 15)}<span>${isAdded ? 'Ajoutée ✓' : 'Ajouter'}</span></button>
-      <a class="btn btn--soft btn--sm" href="${esc(r.link)}" target="_blank" rel="noopener">Site officiel</a>
+      <a class="btn btn--soft btn--sm" href="${esc(r.link)}" target="_blank" rel="noopener">${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}</a>
     </div>
   </article>`;
 }
@@ -71,8 +72,22 @@ function years() {
 export function renderRaces() {
   $$('#racesGroups [data-race-group]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.raceGroup === view.group)));
   $$('#racesYear [data-race-year]').forEach((b, i) => b.setAttribute('aria-checked', String(i === view.yearIdx)));
-  const list = view.group === 'all' ? RACES : RACES.filter(r => r.group === view.group);
-  $('#racesList').innerHTML = list.length ? list.map(raceCard).join('') : '<div class="empty">Aucune course dans cette catégorie.</div>';
+  const q = norm(view.query.trim());
+  const dateOf = r => (r.editions[view.yearIdx] || r.editions[0]).date;
+  const list = RACES.filter(r => (view.group === 'all' || r.group === view.group) && (!q || norm(`${r.name} ${r.location}`).includes(q))).sort((a, b) => dateOf(a).localeCompare(dateOf(b)));
+  $('#racesCount').textContent = `${list.length} course${list.length > 1 ? 's' : ''} · par date`;
+  // Intercalaires par mois pour s'y retrouver dans la liste.
+  let month = '';
+  $('#racesList').innerHTML = list.length
+    ? list
+        .map(r => {
+          const m = dateOf(r).slice(0, 7);
+          const head = m !== month ? `<h3 class="races-month">${new Date(`${m}-15T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</h3>` : '';
+          month = m;
+          return head + raceCard(r);
+        })
+        .join('')
+    : '<div class="empty">Aucune course ne correspond.</div>';
   updateBar();
 }
 
@@ -105,10 +120,14 @@ async function addOne(card, { silent = false } = {}) {
 export function initRaces(h) {
   toast = h.toast;
   const groups = $('#racesGroups');
-  groups.innerHTML = ['<button type="button" role="radio" data-race-group="all" aria-checked="true">Toutes</button>']
-    .concat(RACE_GROUPS.map(g => `<button type="button" role="radio" data-race-group="${esc(g.id)}" aria-checked="false">${esc(g.label)}</button>`))
+  groups.innerHTML = ['<button type="button" class="chip" role="radio" data-race-group="all" aria-checked="true">Toutes</button>']
+    .concat(RACE_GROUPS.map(g => `<button type="button" class="chip" role="radio" data-race-group="${esc(g.id)}" aria-checked="false">${esc(g.label)}</button>`))
     .join('');
-  $('#racesYear').innerHTML = years().map((y, i) => `<button type="button" role="radio" data-race-year="${i}" aria-checked="${i === 0}">Édition ${y}</button>`).join('');
+  $('#racesYear').innerHTML = years().map((y, i) => `<button type="button" class="chip" role="radio" data-race-year="${i}" aria-checked="${i === 0}">Édition ${y}</button>`).join('');
+  $('#racesSearch').addEventListener('input', e => {
+    view.query = e.target.value;
+    renderRaces();
+  });
   groups.addEventListener('click', e => {
     const b = e.target.closest('[data-race-group]');
     if (!b) return;

@@ -1,5 +1,9 @@
 /* Icônes SVG (trait 1.8 px, couleur héritée). */
 const P = {
+  flag: '<path d="M5 21V4"/><path d="M5 4h11l-2 4 2 4H5"/>',
+  hill: '<path d="M2 19h20"/><path d="m3 19 6-8 4 5 3-3 5 6"/>',
+  flat: '<path d="M2 19h20"/><path d="M3 14h18"/>',
+  wave: '<path d="M2 19h20"/><path d="m3 17 4-6 3 3 4-7 3 5 4-2"/>',
   search: '<circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/>',
   locate: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="7.5"/><path d="M12 2v2.5M12 19.5V22M2 12h2.5M19.5 12H22"/>',
   route: '<circle cx="6" cy="18" r="2.5"/><circle cx="18" cy="6" r="2.5"/><path d="M8.5 18H15a3.5 3.5 0 0 0 0-7H9a3.5 3.5 0 0 1 0-7h6.5"/>',

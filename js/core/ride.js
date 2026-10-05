@@ -57,6 +57,19 @@ export const SESSIONS = {
   free: { label: 'Libre', ftp: 0.68, climb: null, km: 70, hint: 'Distance et dénivelé à votre main.' }
 };
 
+/**
+ * Préférence de dénivelé (comme Strava) : « N'importe », « Plat » (éviter les
+ * côtes) ou « Vallonné » (en ajouter). « Libre » = dénivelé chiffré saisi à la main.
+ * `climb` : m de D+ par km utilisé pour l'indication « environ … m ».
+ */
+export const RELIEF = {
+  any: { label: 'N’importe', hint: 'Utilisez les itinéraires les plus populaires, quel que soit le dénivelé positif.', climb: null },
+  flat: { label: 'Plat', hint: 'Évitez les côtes lorsque c’est possible.', climb: 4 },
+  hilly: { label: 'Vallonné', hint: 'Ajoutez du dénivelé positif lorsque c’est possible.', climb: 16 }
+};
+/** Intensité de roulage pour la simulation (sortie d'endurance), en part de la FTP. */
+export const RIDE_FTP = 0.68;
+
 /** Profils BRouter : du plus direct au plus tranquille. */
 export const QUIET_LEVELS = {
   normal: { label: 'Standard', short: 'Standard', traffic: 0, fallback: 'fastbike' },
@@ -415,7 +428,10 @@ export function roadMix(messages) {
 export function scoreRoute(r, target, { loop = true } = {}) {
   const km = r.meters / 1000;
   const distErr = target.km ? Math.abs(km - target.km) / target.km : 0;
-  const elevErr = target.ascent === null ? 0 : Math.abs(r.ascent - target.ascent) / Math.max(target.ascent, 250);
+  const elevErr = target.ascent === null || target.ascent === undefined ? 0 : Math.abs(r.ascent - target.ascent) / Math.max(target.ascent, 250);
+  // Préférence de relief : « Plat » pénalise chaque mètre de montée par km, « Vallonné » le récompense.
+  const climbRate = km ? r.ascent / km : 0;
+  const relief = target.relief === 'flat' ? (Math.min(climbRate, 30) / 10) * 1.2 : target.relief === 'hilly' ? Math.max(0, 1 - climbRate / 20) * 1.6 : 0;
   const windCost = r.sim.secondsNoWind ? r.sim.seconds / r.sim.secondsNoWind - 1 : 0;
   const half = splitHeadwind(r.sim);
   // Tactique : vent de face à l'aller, dans le dos au retour (bonus), l'inverse est pénalisé.
@@ -424,7 +440,7 @@ export function scoreRoute(r, target, { loop = true } = {}) {
   const traffic = mix.major * 1.5 + mix.medium * 0.4;
   const parts = {
     distance: distErr * 3,
-    elevation: elevErr * 1.6,
+    elevation: elevErr * 1.6 + relief,
     wind: Math.max(0, windCost) * 4,
     tactic,
     overlap: r.overlap * 2,

@@ -210,6 +210,17 @@ test('scoreRoute en aller simple : pas de bonus tactique ni de cible de distance
   assert.equal(s.parts.distance, 0);
 });
 
+test('scoreRoute : « Plat » préfère la boucle la moins pentue, « Vallonné » la plus pentue', () => {
+  const coords = outAndBack(0).slice(0, 101);
+  const sim = R.simulate(coords, { power: 200, mass: 81, startTime: T0, wind: WIND_N });
+  const route = ascent => ({ meters: sim.meters, ascent, sim, overlap: 0, mix: { major: 0, medium: 0, unpaved: 0 } });
+  const score = (ascent, relief) => R.scoreRoute(route(ascent), { km: null, ascent: null, relief }).total;
+  const km = sim.meters / 1000;
+  assert.ok(score(3 * km, 'flat') < score(15 * km, 'flat'), 'plat : moins de D+ = mieux');
+  assert.ok(score(15 * km, 'hilly') < score(3 * km, 'hilly'), 'vallonné : plus de D+ = mieux');
+  assert.equal(score(3 * km, 'any'), score(15 * km, 'any'), 'n’importe : le D+ ne compte pas');
+});
+
 /* ---------- Import GPX ---------- */
 test('parseGPX lit traces, routes, altitude et nom', () => {
   const gpx = `<?xml version="1.0"?><gpx version="1.1"><trk><name>Tour &amp; col</name><trkseg>

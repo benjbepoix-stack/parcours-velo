@@ -51,7 +51,8 @@ const orientation = coords => (signedArea(coords) > 0 ? 'Sens inverse des aiguil
  * @param {[number,number]|null} p.end arrivée (aller simple)
  * @param {Array<[number,number]>} p.vias points de passage, dans l'ordre
  * @param {number|null} p.km distance visée (boucle)
- * @param {number|null} p.ascent dénivelé visé
+ * @param {number|null} p.ascent dénivelé visé (mode « Libre »)
+ * @param {'any'|'flat'|'hilly'|'free'} [p.relief] préférence de relief
  * @param {string} p.quiet niveau de trafic
  * @param {Date} p.startTime
  * @param {number} p.power  @param {number} p.mass  @param {number} [p.cda]
@@ -96,8 +97,8 @@ function progress(ctx, total) {
 
 /* ---------- Boucle libre : 8 directions ---------- */
 async function planFreeLoop(ctx) {
-  const { start, km, ascent, windNow } = ctx;
-  const target = { km, ascent };
+  const { start, km, ascent, relief, windNow } = ctx;
+  const target = { km, ascent, relief };
   const evaluate = evaluator(ctx, target);
   const tick = progress(ctx, DIRECTIONS + REFINE);
 
@@ -143,10 +144,10 @@ async function planFreeLoop(ctx) {
 
 /* ---------- Boucle par des points de passage ---------- */
 async function planViaLoop(ctx) {
-  const { start, vias, km, ascent } = ctx;
+  const { start, vias, km, ascent, relief } = ctx;
   const forward = [start, ...vias, start];
   const backward = [start, ...[...vias].reverse(), start];
-  const evaluate = evaluator(ctx, { km: km || null, ascent });
+  const evaluate = evaluator(ctx, { km: km || null, ascent, relief });
   const wantsDetour = () => km && km * 1000 > baseMeters * 1.08;
   let baseMeters = 0;
   const tick = progress(ctx, km ? 14 : 2);
@@ -214,12 +215,12 @@ async function planViaLoop(ctx) {
     routes.push(r);
     if (routes.length >= MAX_RESULTS) break;
   }
-  return { routes, target: { km: km || null, ascent }, loop: true, note };
+  return { routes, target: { km: km || null, ascent, relief }, loop: true, note };
 }
 
 /* ---------- Aller simple A → B ---------- */
 async function planOneWay(ctx) {
-  const { start, end, vias, ascent } = ctx;
+  const { start, end, vias, ascent, relief } = ctx;
   const waypoints = [start, ...(vias || []), end];
   const tick = progress(ctx, 3);
   const results = await pool(
@@ -236,7 +237,7 @@ async function planOneWay(ctx) {
   const ok = okOnly(results);
   failIfEmpty(ok, results);
   const shortest = Math.min(...ok.map(r => r.meters));
-  const target = { km: shortest / 1000, ascent };
+  const target = { km: shortest / 1000, ascent, relief };
   const evaluate = evaluator(ctx, target, { loop: false });
   const evaluated = ok.map(r => evaluate(r)).sort((a, b) => a.score.total - b.score.total);
   // BRouter peut renvoyer deux fois le même tracé : on garde les itinéraires distincts.

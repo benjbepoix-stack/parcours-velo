@@ -33,13 +33,6 @@
         <button type="button" class="icon-btn" id="themeToggle" aria-label="Changer de thème"></button>
       </header>
 
-      <div class="segmented" role="tablist" aria-label="Sections">
-        <button type="button" role="tab" id="tab-ride" aria-controls="pane-ride" aria-selected="true" data-tab="ride">Sortie</button>
-        <button type="button" role="tab" id="tab-cols" aria-controls="pane-cols" aria-selected="false" data-tab="cols">Cols</button>
-        <button type="button" role="tab" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved">Favoris <span class="count" id="savedCount"></span></button>
-        <button type="button" role="tab" id="tab-races" aria-controls="pane-races" aria-selected="false" data-tab="races">Courses</button>
-      </div>
-
       <!-- ============ SORTIE ============ -->
       <section class="pane" id="pane-ride" role="tabpanel" aria-labelledby="tab-ride">
         <form class="form" id="rideForm" novalidate>
@@ -58,10 +51,8 @@
             <input type="file" id="gpxFile" class="visually-hidden">
           </section>
 
-          <section class="step" aria-labelledby="stepSession">
-            <h2 class="step__title" id="stepSession">Séance</h2>
-            <div class="chips" id="sessionChips" role="radiogroup" aria-labelledby="stepSession"></div>
-            <p class="hint" id="sessionHint"></p>
+          <section class="step" aria-labelledby="stepDistance">
+            <h2 class="step__title" id="stepDistance">Distance</h2>
             <div class="range-field" id="distanceField">
               <div class="range-field__head"><label class="label" for="f-km">Distance</label><output class="range-field__value" id="kmOut" for="f-km"></output></div>
               <input type="range" id="f-km" min="20" max="200" step="5">
@@ -71,6 +62,18 @@
               <div class="range-field__head"><label class="label" for="f-days">Nombre de jours</label><output class="range-field__value" id="daysOut" for="f-days"></output></div>
               <input type="range" id="f-days" min="2" max="10" step="1">
               <p class="hint">L’itinéraire entre le départ et l’arrivée est découpé automatiquement en étapes de distance à peu près égale.</p>
+            </div>
+          </section>
+
+          <section class="step" aria-labelledby="stepRelief" id="reliefStep">
+            <div class="step__head">
+              <h2 class="step__title" id="stepRelief">Dénivelé positif</h2>
+              <button type="button" class="relief-free" id="reliefFree" aria-pressed="false"><span data-icon="edit"></span><span>Libre</span></button>
+            </div>
+            <div class="relief" id="reliefOptions" role="radiogroup" aria-labelledby="stepRelief"></div>
+            <div class="relief-input" id="reliefInput" hidden>
+              <div class="field"><label class="label" for="f-ascent">Dénivelé visé · m</label><input class="input" id="f-ascent" inputmode="numeric" autocomplete="off" placeholder="Ex. 1200 (vide = sans objectif)"></div>
+              <p class="hint">Mode libre : les boucles sont classées selon leur écart à ce dénivelé. Touchez « Libre » à nouveau pour revenir aux préférences.</p>
             </div>
           </section>
 
@@ -97,7 +100,6 @@
           <details class="more">
             <summary>Plus d’options</summary>
             <div class="more__body">
-              <div class="field"><label class="label" for="f-ascent">Dénivelé visé · m</label><input class="input" id="f-ascent" inputmode="numeric" autocomplete="off" placeholder="Auto"></div>
               <p class="note" id="riderNote"></p>
             </div>
           </details>
@@ -153,9 +155,11 @@
 
       <!-- ============ COURSES ============ -->
       <section class="pane" id="pane-races" role="tabpanel" aria-labelledby="tab-races" hidden>
-        <p class="hint">Sélection curatée, mise à jour à la main · dates à vérifier avant d’ajouter. « Ajouter » envoie la course directement dans le planning de l’app Carnet.</p>
+        <p class="hint">Plus de 110 cyclosportives d’après les calendriers finishers / velo-cyclosport · dates estimées à vérifier avant d’ajouter. « Ajouter » envoie la course directement dans le planning de l’app Carnet.</p>
+        <input class="input races-search" id="racesSearch" type="search" placeholder="Chercher une course, une ville…" autocomplete="off" aria-label="Chercher une course">
         <div class="chips" id="racesYear" role="radiogroup" aria-label="Édition"></div>
         <div class="chips" id="racesGroups" role="radiogroup" aria-label="Région"></div>
+        <p class="races-count" id="racesCount"></p>
         <div id="racesList"></div>
       </section>
 
@@ -206,6 +210,13 @@
         <span id="racesBarCount"></span>
         <button type="button" class="btn btn--primary btn--sm" id="racesBarAdd">Ajouter au planning</button>
       </div>
+
+      <nav class="tabbar" role="tablist" aria-label="Sections">
+        <button type="button" role="tab" class="tabbar__item" id="tab-ride" aria-controls="pane-ride" aria-selected="true" data-tab="ride"><span class="tabbar__icon" data-icon="route"></span><span class="tabbar__label">Sortie</span></button>
+        <button type="button" role="tab" class="tabbar__item" id="tab-cols" aria-controls="pane-cols" aria-selected="false" data-tab="cols"><span class="tabbar__icon" data-icon="peak"></span><span class="tabbar__label">Cols</span></button>
+        <button type="button" role="tab" class="tabbar__item" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved"><span class="tabbar__icon" data-icon="star"></span><span class="tabbar__label">Favoris</span><span class="count tabbar__count" id="savedCount"></span></button>
+        <button type="button" role="tab" class="tabbar__item" id="tab-races" aria-controls="pane-races" aria-selected="false" data-tab="races"><span class="tabbar__icon" data-icon="flag"></span><span class="tabbar__label">Courses</span></button>
+      </nav>
 
       <footer class="credits">Échappée · itinéraires BRouter · cartes © OpenStreetMap, Esri, CyclOSM · météo Open-Meteo · lieux Photon</footer>
     </aside>
