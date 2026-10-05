@@ -406,16 +406,11 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .export-hint { grid-column: 1 / -1; font-size: 12.5px; color: var(--text-3); }
 
-/* ---------- iPhone : la carte passe sous la barre d'état (heure, réseau, batterie) ----------
-   Elle reste en plein écran, mais ses commandes et bandeaux sont décalés sous l'encoche. */
+/* ---------- Téléphone : carte dans la page, sous le bouton de calcul ---------- */
+.map-slot:empty { display: none; }
 @media (max-width: 959px) {
-  .map .leaflet-top { top: env(safe-area-inset-top, 0px); }
-  .map .leaflet-left { left: env(safe-area-inset-left, 0px); }
-  .map .leaflet-right { right: env(safe-area-inset-right, 0px); }
-  .map-banner { top: calc(12px + env(safe-area-inset-top, 0px)); }
-  .map-wrap { min-height: calc(280px + env(safe-area-inset-top, 0px)); height: calc(44vh + env(safe-area-inset-top, 0px)); }
-  /* Léger dégradé derrière la barre d'état pour garder l'heure lisible sur un fond clair. */
-  .map-wrap::before { content: ""; position: absolute; z-index: 450; left: 0; right: 0; top: 0; height: env(safe-area-inset-top, 0px); background: linear-gradient(to bottom, rgba(0, 0, 0, .45), rgba(0, 0, 0, 0)); pointer-events: none; }
+  .map-slot .map-wrap { order: 0; height: 52vh; min-height: 300px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); }
+  .panel { border-top: 0; }
 }
 
 /* ---------- Mes données ---------- */
@@ -470,3 +465,32 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 #racesGroups { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin: 0 -4px; padding: 0 4px 2px; }
 #racesGroups::-webkit-scrollbar { display: none; }
 #racesGroups .chip { flex: none; white-space: nowrap; }
+
+/* ---------- Bouton de calcul au-dessus de la barre d'onglets ---------- */
+.cta { bottom: calc(82px + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+@media (min-width: 960px) { .cta { bottom: 86px; } }
+
+/* ---------- Allure (zones de FTP) ---------- */
+.segmented--four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.segmented--three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#dayChips { flex: 1 1 100%; }
+#zoneSwitch button { flex-direction: column; gap: 1px; min-height: 52px; line-height: 1.1; }
+#zoneSwitch button strong { font: italic 800 18px var(--display); }
+#zoneSwitch button small { font-size: 11.5px; font-weight: 650; color: var(--text-3); font-variant-numeric: tabular-nums; }
+#zoneSwitch button[aria-checked="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+#zoneSwitch button[aria-checked="true"] small { color: var(--accent-ink); opacity: .75; }
+
+/* ---------- Courses : autour de, tags ---------- */
+.races-around { display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); }
+.races-around__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.races-around__head > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.races-around__origin { font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.races-around__row { display: flex; align-items: center; gap: 8px; }
+.races-around__row .segmented { flex: 1; grid-template-columns: 1fr 1fr; }
+.range-field__value--sm { font-size: 18px !important; }
+.race__km { color: var(--accent-text); font-weight: 800; }
+.race__tag { display: inline-block; margin-left: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; background: var(--amber-soft); color: var(--amber); vertical-align: 1px; }
+.race__tag--ok { background: color-mix(in srgb, var(--tail) 16%, transparent); color: var(--tail); }
+.race__validate.is-on { border-color: color-mix(in srgb, var(--tail) 45%, var(--line)); color: var(--tail); }
+/* Messages au-dessus de la barre d'onglets */
+.toasts { bottom: calc(96px + env(safe-area-inset-bottom)) !important; z-index: 950; }

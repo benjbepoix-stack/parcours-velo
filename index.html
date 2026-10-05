@@ -68,22 +68,22 @@
           <section class="step" aria-labelledby="stepRelief" id="reliefStep">
             <div class="step__head">
               <h2 class="step__title" id="stepRelief">Dénivelé positif</h2>
-              <button type="button" class="relief-free" id="reliefFree" aria-pressed="false"><span data-icon="edit"></span><span>Libre</span></button>
+              <button type="button" class="relief-free" id="reliefFree" aria-pressed="false"><span data-icon="edit"></span><span>Saisir en mètres</span></button>
             </div>
             <div class="relief" id="reliefOptions" role="radiogroup" aria-labelledby="stepRelief"></div>
             <div class="relief-input" id="reliefInput" hidden>
               <div class="field"><label class="label" for="f-ascent">Dénivelé visé · m</label><input class="input" id="f-ascent" inputmode="numeric" autocomplete="off" placeholder="Ex. 1200 (vide = sans objectif)"></div>
-              <p class="hint">Mode libre : les boucles sont classées selon leur écart à ce dénivelé. Touchez « Libre » à nouveau pour revenir aux préférences.</p>
+              <p class="hint">Les boucles sont classées selon leur écart à ce dénivelé. Touchez « Saisir en mètres » à nouveau pour revenir à N’importe / Plat / Vallonné.</p>
             </div>
           </section>
 
           <section class="step" aria-labelledby="stepWhen">
             <h2 class="step__title" id="stepWhen">Départ</h2>
             <div class="when">
-              <div class="chips" id="dayChips" role="radiogroup" aria-labelledby="stepWhen">
-                <button type="button" class="chip" role="radio" data-day="today">Aujourd’hui</button>
-                <button type="button" class="chip" role="radio" data-day="tomorrow">Demain</button>
-                <button type="button" class="chip" role="radio" data-day="other">Autre jour</button>
+              <div class="segmented segmented--three" id="dayChips" role="radiogroup" aria-labelledby="stepWhen">
+                <button type="button" role="radio" data-day="today">Aujourd’hui</button>
+                <button type="button" role="radio" data-day="tomorrow">Demain</button>
+                <button type="button" role="radio" data-day="other">Autre jour</button>
               </div>
               <div class="when__inputs">
                 <input class="input" id="f-date" type="date" aria-label="Jour de départ" hidden>
@@ -97,18 +97,19 @@
             <div class="segmented" id="quietSwitch" role="radiogroup" aria-labelledby="stepRoads"></div>
           </section>
 
-          <details class="more">
-            <summary>Plus d’options</summary>
-            <div class="more__body">
-              <p class="note" id="riderNote"></p>
-            </div>
-          </details>
+          <section class="step" aria-labelledby="stepPace" id="paceStep">
+            <h2 class="step__title" id="stepPace">Allure</h2>
+            <div class="segmented segmented--four" id="zoneSwitch" role="radiogroup" aria-labelledby="stepPace"></div>
+            <p class="note" id="riderNote"></p>
+          </section>
 
           <div class="cta">
             <button type="submit" class="btn btn--primary btn--lg" id="submitBtn"><span data-icon="route"></span><span id="submitLabel">Trouver mes boucles</span></button>
             <div class="progress" id="progress" hidden aria-live="polite"><div class="progress__track"><div class="progress__bar"></div></div><span class="progress__label"></span></div>
           </div>
         </form>
+
+        <div class="map-slot" id="mapSlotRide"></div>
 
         <div id="forecast" class="forecast" hidden></div>
 
@@ -122,6 +123,7 @@
       <!-- ============ COLS ============ -->
       <section class="pane" id="pane-cols" role="tabpanel" aria-labelledby="tab-cols" hidden>
         <div class="cols-summary" id="colsSummary" aria-live="polite"></div>
+        <div class="map-slot" id="mapSlotCols"></div>
         <div class="segmented segmented--two" id="colsTabs" role="radiogroup" aria-label="Affichage des cols">
           <button type="button" role="radio" data-cols-tab="top" aria-checked="true">Top 10</button>
           <button type="button" role="radio" data-cols-tab="all" aria-checked="false">Tous les cols</button>
@@ -158,6 +160,22 @@
         <p class="hint">Plus de 110 cyclosportives d’après les calendriers finishers / velo-cyclosport · dates estimées à vérifier avant d’ajouter. « Ajouter » envoie la course directement dans le planning de l’app Carnet.</p>
         <input class="input races-search" id="racesSearch" type="search" placeholder="Chercher une course, une ville…" autocomplete="off" aria-label="Chercher une course">
         <div class="chips" id="racesYear" role="radiogroup" aria-label="Édition"></div>
+        <section class="races-around" aria-labelledby="racesAroundTitle">
+          <div class="races-around__head">
+            <div><span class="label" id="racesAroundTitle">Autour de</span><strong class="races-around__origin" id="racesOrigin"></strong></div>
+            <button type="button" class="relief-free" id="racesHere" aria-pressed="false"><span data-icon="locate"></span><span>Ma position</span></button>
+          </div>
+          <div class="range-field__head"><label class="label" for="racesRadius">Rayon</label><output class="range-field__value range-field__value--sm" id="racesRadiusOut" for="racesRadius"></output></div>
+          <input type="range" id="racesRadius" min="25" max="600" step="25">
+          <div class="races-around__row">
+            <div class="segmented segmented--two" id="racesSort" role="radiogroup" aria-label="Trier">
+              <button type="button" role="radio" data-race-sort="date" aria-checked="true">Par date</button>
+              <button type="button" role="radio" data-race-sort="distance" aria-checked="false">Par distance</button>
+            </div>
+            <button type="button" class="chip" role="checkbox" id="racesValidated" aria-checked="false">✓ Validées</button>
+          </div>
+          <p class="hint">Distances à vol d’oiseau depuis le départ choisi dans « Sortie » (ou votre position). « Validées » : dates officielles, ou vérifiées par vous avec « Valider la date ».</p>
+        </section>
         <div class="chips" id="racesGroups" role="radiogroup" aria-label="Région"></div>
         <p class="races-count" id="racesCount"></p>
         <div id="racesList"></div>

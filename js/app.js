@@ -1,5 +1,5 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
-import { RELIEF, RIDE_FTP, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
+import { RELIEF, ZONES, estimateDuration, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
 import { planMultiDay, clampDays, stageGPX, MIN_DAYS, MAX_DAYS } from './core/trip.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
@@ -36,7 +36,7 @@ const needsEnd = mode => mode === 'oneway' || mode === 'multi';
 
 /* ---------- Préférences (avec migration de l'ancien format) ---------- */
 const DEFAULT_START = { lat: 47.2378, lon: 6.0241, name: 'Besançon' };
-const prefs = store.loadPrefs({ mode: 'loop', relief: 'any', km: 80, ascent: '', quiet: 'quiet', start: DEFAULT_START, end: null, vias: [], days: 3 });
+const prefs = store.loadPrefs({ mode: 'loop', relief: 'any', zone: 'z2', km: 80, ascent: '', quiet: 'quiet', start: DEFAULT_START, end: null, vias: [], days: 3 });
 if (Array.isArray(prefs.start)) prefs.start = { lat: prefs.start[0], lon: prefs.start[1], name: prefs.startName || null };
 delete prefs.startName;
 if (!isPoint(prefs.start)) prefs.start = { ...DEFAULT_START };
@@ -45,6 +45,7 @@ if (!prefs.relief && prefs.session) prefs.relief = { climbing: 'hilly', recovery
 delete prefs.session;
 if (!RELIEF[prefs.relief] && prefs.relief !== 'free') prefs.relief = 'any';
 if (!QUIET_LEVELS[prefs.quiet]) prefs.quiet = 'quiet';
+if (!ZONES[prefs.zone]) prefs.zone = 'z2';
 if (!['loop', 'oneway', 'multi'].includes(prefs.mode)) prefs.mode = 'loop';
 if (!isPoint(prefs.end)) prefs.end = null;
 prefs.days = clampDays(prefs.days);
@@ -71,7 +72,7 @@ function toast(message, { error = false } = {}) {
 }
 
 const rider = () => ({
-  power: profile.ftp * RIDE_FTP,
+  power: profile.ftp * ZONES[prefs.zone].ftp,
   mass: profile.weight + profile.bike,
   cda: profile.cda
 });
@@ -87,6 +88,19 @@ function applyTheme(theme) {
 }
 
 /* ---------- Onglets ---------- */
+/*
+ * Téléphone : la carte s'insère dans la page, juste sous le bouton « Trouver mes boucles »
+ * (ou en haut de l'onglet Cols). Ordinateur : elle reste à droite du panneau.
+ * Leaflet suit le déplacement grâce à son ResizeObserver.
+ */
+const mobileMQ = matchMedia('(max-width: 959px)');
+let activeTab = 'ride';
+function placeMap() {
+  const wrap = $('.map-wrap');
+  const target = !mobileMQ.matches ? $('.layout') : activeTab === 'cols' ? $('#mapSlotCols') : $('#mapSlotRide');
+  if (wrap && target && wrap.parentElement !== target) target.appendChild(wrap);
+}
+
 function showTab(name) {
   // Le bouton Profil vit dans l'en-tête, hors de la barre d'onglets (role="tablist") :
   // c'est un simple bouton bascule, donc aria-pressed plutôt qu'aria-selected.
@@ -96,6 +110,8 @@ function showTab(name) {
   });
   const previous = ['ride', 'cols', 'saved', 'races', 'profile'].find(t => !$(`#pane-${t}`).hidden);
   ['ride', 'cols', 'saved', 'races', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
+  activeTab = name;
+  placeMap();
   // Téléphone : en changeant d'onglet depuis le bas de la page, on revient au début du panneau.
   if (previous !== name && matchMedia('(max-width: 959px)').matches) {
     const top = $('#panel').getBoundingClientRect().top + window.scrollY;
@@ -427,10 +443,23 @@ function renderDistance() {
   renderRider();
 }
 
+/** Allure : zones Z1 à Z4 en % de la FTP, avec puissance et durée estimée pour la sortie réglée. */
 function renderRider() {
-  $('#riderNote').innerHTML = `Allure visée : <strong>${Math.round(rider().power)} W</strong> (${Math.round(RIDE_FTP * 100)} % de votre FTP de ${profile.ftp} W, rythme d’endurance)${
-    profile.custom ? '' : ' — <button type="button" class="link" data-go="profile">renseignez votre profil</button>'
-  }.`;
+  const ftp = profile.ftp;
+  const mass = profile.weight + profile.bike;
+  const km = prefs.mode === 'loop' ? prefs.km : null;
+  const ascent = prefs.relief === 'free' && num(prefs.ascent) !== null ? num(prefs.ascent) : km ? km * (RELIEF[prefs.relief]?.climb ?? 9) : 0;
+  $('#zoneSwitch').innerHTML = Object.entries(ZONES)
+    .map(([k, z]) => {
+      const t = km ? estimateDuration(km, ascent, ftp * z.ftp, mass, profile.cda) : null;
+      return `<button type="button" role="radio" data-zone="${k}" aria-checked="${k === prefs.zone}"><strong>${z.label}</strong><small>${t ? fmtDur(t) : esc(z.name)}</small></button>`;
+    })
+    .join('');
+  const z = ZONES[prefs.zone];
+  const t = km ? estimateDuration(km, ascent, ftp * z.ftp, mass, profile.cda) : null;
+  $('#riderNote').innerHTML = `<strong>${z.label} · ${esc(z.name)}</strong> : ${Math.round(ftp * z.min)}–${Math.round(ftp * z.max)} W (${Math.round(z.min * 100)}–${Math.round(z.max * 100)} % de votre FTP de ${ftp} W), simulée à <strong>${Math.round(ftp * z.ftp)} W</strong>${
+    t ? `. Environ <strong>${fmtDur(t)}</strong> pour ${km} km et ~${Math.round(ascent)} m D+ (avant vent et tracé exact)` : ''
+  }${profile.custom ? '' : ' — <button type="button" class="link" data-go="profile">renseignez votre profil</button>'}.`;
 }
 
 function renderQuiet() {
@@ -1210,6 +1239,8 @@ function init() {
   if (carnetSync) syncFromCarnet({ silent: true });
   renderSavedCount();
 
+  placeMap();
+  mobileMQ.addEventListener('change', placeMap);
   const mapReady = () => {
     mapUi.initMap($('#map'), {
       center: ll(prefs.start),
@@ -1255,12 +1286,21 @@ function init() {
     $(`[data-stop="${id}"] .stop__input`)?.focus();
   });
   $('#mapBannerCancel').addEventListener('click', stopPicking);
+  $('#zoneSwitch').addEventListener('click', e => {
+    const b = e.target.closest('[data-zone]');
+    if (!b || b.dataset.zone === prefs.zone) return;
+    prefs.zone = b.dataset.zone;
+    savePrefs();
+    renderRider();
+    invalidateResult();
+  });
   $('#reliefOptions').addEventListener('click', e => {
     const opt = e.target.closest('[data-relief]');
     if (!opt || opt.dataset.relief === prefs.relief) return;
     prefs.relief = opt.dataset.relief;
     savePrefs();
     renderRelief();
+    renderRider();
     invalidateResult();
   });
   $('#reliefFree').addEventListener('click', () => {
@@ -1272,12 +1312,14 @@ function init() {
     }
     savePrefs();
     renderRelief();
+    renderRider();
     invalidateResult();
     if (prefs.relief === 'free') $('#f-ascent').focus();
   });
   $('#f-ascent').addEventListener('change', () => {
     prefs.ascent = $('#f-ascent').value.trim();
     savePrefs();
+    renderRider();
     invalidateResult();
   });
   $('#f-km').addEventListener('input', e => {
@@ -1406,7 +1448,7 @@ function init() {
     }
   });
 
-  initRaces({ toast });
+  initRaces({ toast, getStart: () => (isPoint(prefs.start) ? prefs.start : null) });
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }

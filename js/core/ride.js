@@ -67,8 +67,29 @@ export const RELIEF = {
   flat: { label: 'Plat', hint: 'Évitez les côtes lorsque c’est possible.', climb: 4 },
   hilly: { label: 'Vallonné', hint: 'Ajoutez du dénivelé positif lorsque c’est possible.', climb: 16 }
 };
-/** Intensité de roulage pour la simulation (sortie d'endurance), en part de la FTP. */
-export const RIDE_FTP = 0.68;
+/**
+ * Zones d'allure (modèle de Coggan, en part de la FTP) : `min`–`max` pour l'affichage,
+ * `ftp` = intensité tenue dans la simulation.
+ */
+export const ZONES = {
+  z1: { label: 'Z1', name: 'Récupération', min: 0.45, max: 0.55, ftp: 0.5 },
+  z2: { label: 'Z2', name: 'Endurance', min: 0.56, max: 0.75, ftp: 0.68 },
+  z3: { label: 'Z3', name: 'Tempo', min: 0.76, max: 0.9, ftp: 0.83 },
+  z4: { label: 'Z4', name: 'Seuil', min: 0.91, max: 1.05, ftp: 0.95 }
+};
+export const RIDE_FTP = ZONES.z2.ftp;
+
+/**
+ * Durée estimée (s) avant calcul du parcours : distance à plat à la puissance donnée,
+ * plus le temps de montée du dénivelé (énergie potentielle, rendement ~ 85 % de la puissance utile en côte).
+ */
+export function estimateDuration(km, ascent, power, mass, cda = CDA) {
+  if (!km || !power) return null;
+  const flat = (km * 1000) / speedFor(power, 0, 0, mass, cda);
+  const climb = ascent > 0 ? (mass * 9.81 * ascent) / (power * 0.85) : 0;
+  // En montée on va moins vite qu'à plat sur la même distance : on n'ajoute que l'écart.
+  return flat + climb * 0.75;
+}
 
 /** Profils BRouter : du plus direct au plus tranquille. */
 export const QUIET_LEVELS = {

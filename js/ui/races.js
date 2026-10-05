@@ -3,6 +3,7 @@ import * as store from '../services/store.js';
 import { addRaceToCarnet } from '../services/carnet-sync.js';
 import { icon } from './icons.js';
 import { RACES, RACE_GROUPS } from '../data/races.js';
+import { haversine } from '../core/ride.js';
 
 const $ = sel => document.querySelector(sel);
 const $$ = sel => [...document.querySelectorAll(sel)];
@@ -10,8 +11,29 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 let added = new Set(store.loadRacesAdded());
 const saveAdded = () => store.saveRacesAdded([...added]);
+let validated = new Set(store.loadRacesValidated());
+const saveValidated = () => store.saveRacesValidated([...validated]);
 
-const view = { group: 'all', yearIdx: 0, query: '' };
+const MAX_RADIUS = 600; // curseur au maximum : toute la France
+const savedView = store.loadRacesView();
+const view = {
+  group: 'all',
+  yearIdx: 0,
+  query: '',
+  sort: savedView.sort === 'distance' ? 'distance' : 'date',
+  radius: Math.min(MAX_RADIUS, Math.max(25, Number(savedView.radius) || MAX_RADIUS)),
+  onlyValidated: Boolean(savedView.onlyValidated),
+  here: null // position de l'appareil, si demandée
+};
+const persistView = () => store.saveRacesView({ sort: view.sort, radius: view.radius, onlyValidated: view.onlyValidated });
+let getStart = () => null;
+/** Origine des distances : position de l'appareil si demandée, sinon le départ choisi dans « Sortie ». */
+const origin = () => view.here || getStart();
+const distanceOf = r => {
+  const o = origin();
+  return o && r.coords ? haversine([o.lat, o.lon], r.coords) / 1000 : null;
+};
+const isValidated = (r, edition) => edition.confirmed || validated.has(addedKey(r.id, edition.year));
 const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 let toast = () => {};
 
@@ -22,13 +44,15 @@ function addedKey(raceId, year) {
 function raceCard(r) {
   const edition = r.editions[view.yearIdx] || r.editions[0];
   const isAdded = added.has(addedKey(r.id, edition.year));
+  const ok = isValidated(r, edition);
+  const km = distanceOf(r);
   return `<article class="race ${isAdded ? 'is-added' : ''}" data-race="${r.id}">
     <header class="race__head">
       <label class="race__check"><input type="checkbox" data-race-check ${isAdded ? 'disabled' : ''}></label>
       <div class="race__titles">
         <h3 class="race__name">${esc(r.name)}</h3>
-        <p class="race__meta">${esc(r.location)}</p>
-        <p class="race__period">${esc(r.period)}${edition.confirmed ? '' : ' · <em>à vérifier</em>'}</p>
+        <p class="race__meta">${esc(r.location)}${km !== null ? ` · <strong class="race__km">${Math.round(km)} km</strong>` : ''}</p>
+        <p class="race__period">${esc(r.period)} ${ok ? '<span class="race__tag race__tag--ok">Validée</span>' : '<span class="race__tag">À vérifier</span>'}</p>
       </div>
       <button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Ajoutée au calendrier · toucher pour retirer la marque' : 'Marquer comme déjà ajoutée au calendrier (sans repasser par Carnet)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>
     </header>
@@ -36,6 +60,7 @@ function raceCard(r) {
     ${r.notes ? `<p class="race__notes">${esc(r.notes)}</p>` : ''}
     <div class="race__actions">
       <input type="date" class="input race__date" data-race-date value="${esc(edition.date)}" aria-label="Date de l'édition ${edition.year} pour ${esc(r.name)}">
+      ${edition.confirmed ? '' : `<button type="button" class="btn btn--soft btn--sm race__validate ${ok ? 'is-on' : ''}" data-race-validate aria-pressed="${ok}" title="${ok ? 'Date vérifiée · toucher pour annuler' : 'J’ai vérifié la date sur le site de l’épreuve'}">${icon('check', 15)}<span>${ok ? 'Validée' : 'Valider la date'}</span></button>`}
       <button type="button" class="btn btn--soft btn--sm" data-race-action="add" ${isAdded ? 'disabled' : ''}>${icon(isAdded ? 'check' : 'plus', 15)}<span>${isAdded ? 'Ajoutée ✓' : 'Ajouter'}</span></button>
       <a class="btn btn--soft btn--sm" href="${esc(r.link)}" target="_blank" rel="noopener">${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}</a>
     </div>
@@ -57,6 +82,20 @@ function toggleMark(card) {
   toast(now ? 'Marquée comme ajoutée au calendrier' : 'Marque retirée', { type: 'info' });
 }
 
+/** Date vérifiée par l'utilisateur sur le site de l'épreuve : tag « Validée » (local à l'appareil). */
+function toggleValidated(card) {
+  const r = RACES.find(x => x.id === card.dataset.race);
+  const edition = r.editions[view.yearIdx] || r.editions[0];
+  const key = addedKey(r.id, edition.year);
+  const now = !validated.has(key);
+  if (now) validated.add(key);
+  else validated.delete(key);
+  saveValidated();
+  if (view.onlyValidated && !now) renderRaces();
+  else card.outerHTML = raceCard(r);
+  toast(now ? 'Date validée' : 'Validation retirée', { type: 'info' });
+}
+
 function updateBar() {
   const n = $$('#racesList [data-race-check]:checked').length;
   const bar = $('#racesBar');
@@ -69,19 +108,40 @@ function years() {
   return RACES[0].editions.map(e => e.year);
 }
 
+/** Bloc « Autour de » : origine, curseur de rayon, tri et filtre « validées ». */
+function renderAround() {
+  const o = origin();
+  $('#racesOrigin').textContent = o ? (view.here ? 'Ma position' : o.name || 'Départ de la sortie') : 'Choisissez un départ dans « Sortie »';
+  $('#racesHere').setAttribute('aria-pressed', String(Boolean(view.here)));
+  $('#racesRadius').value = view.radius;
+  $('#racesRadiusOut').textContent = view.radius >= MAX_RADIUS ? 'Toute la France' : `${view.radius} km à la ronde`;
+  $$('#racesSort [data-race-sort]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.raceSort === view.sort)));
+  $('#racesValidated').setAttribute('aria-checked', String(view.onlyValidated));
+}
+
 export function renderRaces() {
   $$('#racesGroups [data-race-group]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.raceGroup === view.group)));
   $$('#racesYear [data-race-year]').forEach((b, i) => b.setAttribute('aria-checked', String(i === view.yearIdx)));
   const q = norm(view.query.trim());
   const dateOf = r => (r.editions[view.yearIdx] || r.editions[0]).date;
-  const list = RACES.filter(r => (view.group === 'all' || r.group === view.group) && (!q || norm(`${r.name} ${r.location}`).includes(q))).sort((a, b) => dateOf(a).localeCompare(dateOf(b)));
-  $('#racesCount').textContent = `${list.length} course${list.length > 1 ? 's' : ''} · par date`;
+  const editionOf = r => r.editions[view.yearIdx] || r.editions[0];
+  const o = origin();
+  const radiusOn = o && view.radius < MAX_RADIUS;
+  const list = RACES.filter(
+    r =>
+      (view.group === 'all' || r.group === view.group) &&
+      (!q || norm(`${r.name} ${r.location}`).includes(q)) &&
+      (!view.onlyValidated || isValidated(r, editionOf(r))) &&
+      (!radiusOn || (distanceOf(r) ?? Infinity) <= view.radius)
+  ).sort((a, b) => (view.sort === 'distance' && o ? (distanceOf(a) ?? 1e9) - (distanceOf(b) ?? 1e9) : 0) || dateOf(a).localeCompare(dateOf(b)));
+  renderAround();
+  $('#racesCount').textContent = `${list.length} course${list.length > 1 ? 's' : ''} · ${view.sort === 'distance' && o ? 'de la plus proche à la plus lointaine' : 'par date'}`;
   // Intercalaires par mois pour s'y retrouver dans la liste.
   let month = '';
   $('#racesList').innerHTML = list.length
     ? list
         .map(r => {
-          const m = dateOf(r).slice(0, 7);
+          const m = view.sort === 'distance' && o ? month : dateOf(r).slice(0, 7);
           const head = m !== month ? `<h3 class="races-month">${new Date(`${m}-15T12:00:00`).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })}</h3>` : '';
           month = m;
           return head + raceCard(r);
@@ -119,6 +179,44 @@ async function addOne(card, { silent = false } = {}) {
 /** @param {{toast:Function}} h */
 export function initRaces(h) {
   toast = h.toast;
+  getStart = h.getStart || getStart;
+  $('#racesRadius').max = MAX_RADIUS;
+  $('#racesRadius').addEventListener('input', e => {
+    view.radius = Number(e.target.value);
+    // Un rayon n'a de sens qu'avec le tri par distance : on le bascule automatiquement.
+    if (view.radius < MAX_RADIUS) view.sort = 'distance';
+    persistView();
+    renderRaces();
+  });
+  $('#racesSort').addEventListener('click', e => {
+    const b = e.target.closest('[data-race-sort]');
+    if (!b) return;
+    view.sort = b.dataset.raceSort;
+    persistView();
+    renderRaces();
+  });
+  $('#racesValidated').addEventListener('click', () => {
+    view.onlyValidated = !view.onlyValidated;
+    persistView();
+    renderRaces();
+  });
+  $('#racesHere').addEventListener('click', () => {
+    if (view.here) {
+      view.here = null;
+      return renderRaces();
+    }
+    if (!navigator.geolocation) return toast('Géolocalisation indisponible sur cet appareil.', { error: true });
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        view.here = { lat: pos.coords.latitude, lon: pos.coords.longitude, name: 'Ma position' };
+        view.sort = 'distance';
+        persistView();
+        renderRaces();
+      },
+      () => toast('Position refusée ou introuvable : le départ de la sortie est utilisé.', { error: true }),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 }
+    );
+  });
   const groups = $('#racesGroups');
   groups.innerHTML = ['<button type="button" class="chip" role="radio" data-race-group="all" aria-checked="true">Toutes</button>']
     .concat(RACE_GROUPS.map(g => `<button type="button" class="chip" role="radio" data-race-group="${esc(g.id)}" aria-checked="false">${esc(g.label)}</button>`))
@@ -144,7 +242,9 @@ export function initRaces(h) {
     const btn = e.target.closest('[data-race-action="add"]');
     if (btn) return addOne(btn.closest('[data-race]'));
     const markBtn = e.target.closest('[data-race-mark]');
-    if (markBtn) toggleMark(markBtn.closest('[data-race]'));
+    if (markBtn) return toggleMark(markBtn.closest('[data-race]'));
+    const validateBtn = e.target.closest('[data-race-validate]');
+    if (validateBtn) toggleValidated(validateBtn.closest('[data-race]'));
   });
   $('#racesList').addEventListener('change', e => {
     if (e.target.matches('[data-race-check]')) updateBar();
