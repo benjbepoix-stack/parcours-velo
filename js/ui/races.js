@@ -41,6 +41,9 @@ function addedKey(raceId, year) {
   return `${raceId}@${year}`;
 }
 
+/** Notes utiles seulement (sans la mention générique de source répétée sur chaque carte). */
+const notesOf = r => String(r.notes || '').replace(/\s*Ajoutée d’après les calendriers 2026[^.]*: date 2027 estimée au même jour de la semaine\.\s*/, '').trim();
+
 function raceCard(r) {
   const edition = r.editions[view.yearIdx] || r.editions[0];
   const isAdded = added.has(addedKey(r.id, edition.year));
@@ -51,16 +54,16 @@ function raceCard(r) {
       <div class="race__titles">
         <h3 class="race__name">${esc(r.name)}</h3>
         <p class="race__meta">${esc(r.location)}${km !== null ? ` · <strong class="race__km">${Math.round(km)} km</strong>` : ''}</p>
-        <p class="race__period">${esc(r.period)}${edition.confirmed ? '' : ' · <em>à vérifier</em>'}</p>
+        <p class="race__date-line">${esc(new Date(`${edition.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }))}${edition.confirmed ? '' : ' <em>· date estimée</em>'}</p>
       </div>
       <button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Ajoutée au calendrier · toucher pour retirer la marque' : 'Marquer comme déjà ajoutée au calendrier (sans repasser par Carnet)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>
     </header>
-    <p class="race__dist">${esc(r.distance)}</p>
-    ${r.notes ? `<p class="race__notes">${esc(r.notes)}</p>` : ''}
+    ${/^Plusieurs parcours/.test(r.distance) ? '' : `<p class="race__dist">${esc(r.distance)}</p>`}
+    ${notesOf(r) ? `<p class="race__notes">${esc(notesOf(r))}</p>` : ''}
     <div class="race__actions">
       <input type="date" class="input race__date" data-race-date value="${esc(edition.date)}" aria-label="Date de l'édition ${edition.year} pour ${esc(r.name)}">
       <button type="button" class="btn btn--soft btn--sm" data-race-action="add" ${isAdded ? 'disabled' : ''}>${icon(isAdded ? 'check' : 'plus', 15)}<span>${isAdded ? 'Ajoutée ✓' : 'Ajouter'}</span></button>
-      <a class="btn btn--soft btn--sm" href="${esc(r.link)}" target="_blank" rel="noopener">${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}</a>
+      <a class="btn btn--soft btn--sm race__link" href="${esc(r.link)}" target="_blank" rel="noopener" aria-label="${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}" title="${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}">${icon('external', 16)}</a>
     </div>
   </article>`;
 }

@@ -28,7 +28,7 @@
     <aside class="panel" id="panel" tabindex="-1">
       <header class="brand">
         <img class="brand__logo" src="icons/icon.svg" alt="" width="36" height="36">
-        <div class="brand__text"><h1 class="brand__title">Échappée</h1><p class="brand__sub">Sortez du peloton, gardez les petites routes</p></div>
+        <div class="brand__text"><h1 class="brand__title">Échappée</h1></div>
         <button type="button" class="icon-btn" id="tab-profile" data-tab="profile" data-icon="user" aria-pressed="false" aria-label="Profil" title="Profil"></button>
         <button type="button" class="icon-btn" id="themeToggle" aria-label="Changer de thème"></button>
       </header>
@@ -46,22 +46,21 @@
             <h2 class="step__title" id="stepRoute">Itinéraire</h2>
             <ol class="stops" id="stops"></ol>
             <button type="button" class="add-stop" id="addVia"><span data-icon="plus"></span><span>Ajouter un point de passage</span></button>
-            <p class="hint">Astuce : touchez la carte pour placer un point, faites glisser un repère pour le déplacer.</p>
-            <label class="gpx-import" for="gpxFile"><span data-icon="upload"></span><span>Analyser un fichier GPX (effet du vent)</span></label>
+            <label class="gpx-import" for="gpxFile"><span data-icon="upload"></span><span>Analyser un GPX</span></label>
             <input type="file" id="gpxFile" class="visually-hidden">
           </section>
 
           <section class="step" aria-labelledby="stepDistance">
             <h2 class="step__title" id="stepDistance">Distance</h2>
             <div class="range-field" id="distanceField">
-              <div class="range-field__head"><label class="label" for="f-km">Distance</label><output class="range-field__value" id="kmOut" for="f-km"></output></div>
+              <div class="range-field__head"><label class="label visually-hidden" for="f-km">Distance</label><output class="range-field__value" id="kmOut" for="f-km"></output></div>
               <input type="range" id="f-km" min="20" max="200" step="5">
               <p class="hint" id="distanceHint"></p>
             </div>
             <div class="range-field" id="daysField" hidden>
               <div class="range-field__head"><label class="label" for="f-days">Nombre de jours</label><output class="range-field__value" id="daysOut" for="f-days"></output></div>
               <input type="range" id="f-days" min="2" max="10" step="1">
-              <p class="hint">L’itinéraire entre le départ et l’arrivée est découpé automatiquement en étapes de distance à peu près égale.</p>
+              <p class="hint">Étapes de distance égale.</p>
             </div>
           </section>
 
@@ -72,8 +71,7 @@
             </div>
             <div class="relief" id="reliefOptions" role="radiogroup" aria-labelledby="stepRelief"></div>
             <div class="relief-input" id="reliefInput" hidden>
-              <div class="field"><label class="label" for="f-ascent">Dénivelé visé · m</label><input class="input" id="f-ascent" inputmode="numeric" autocomplete="off" placeholder="Ex. 1200 (vide = sans objectif)"></div>
-              <p class="hint">Les boucles sont classées selon leur écart à ce dénivelé. Touchez « Saisir en mètres » à nouveau pour revenir à N’importe / Plat / Vallonné.</p>
+              <div class="field"><label class="label" for="f-ascent">Dénivelé visé · m</label><input class="input" id="f-ascent" inputmode="numeric" autocomplete="off" placeholder="Ex. 1200"></div>
             </div>
           </section>
 
@@ -146,18 +144,15 @@
           </div>
         </div>
         <div class="cols-list" id="colsList"></div>
-        <p class="hint">Chiffres indicatifs pour le versant indiqué ; catégorie estimée à partir de la longueur, de la pente et de l’altitude. Vos cols gravis restent sur cet appareil.</p>
       </section>
 
       <!-- ============ FAVORIS ============ -->
       <section class="pane" id="pane-saved" role="tabpanel" aria-labelledby="tab-saved" hidden>
-        <p class="hint">Vos parcours enregistrés restent sur cet appareil. Rouvrez-en un pour recalculer le vent au jour et à l’heure choisis dans « Sortie ».</p>
         <div id="savedList" class="saved-list"></div>
       </section>
 
       <!-- ============ COURSES ============ -->
       <section class="pane" id="pane-races" role="tabpanel" aria-labelledby="tab-races" hidden>
-        <p class="hint">Plus de 110 cyclosportives d’après les calendriers finishers / velo-cyclosport · dates estimées à vérifier avant d’ajouter. « Ajouter » envoie la course directement dans le planning de l’app Carnet.</p>
         <input class="input races-search" id="racesSearch" type="search" placeholder="Chercher une course, une ville…" autocomplete="off" aria-label="Chercher une course">
         <div class="chips" id="racesYear" role="radiogroup" aria-label="Édition"></div>
         <section class="races-around" aria-labelledby="racesAroundTitle">
@@ -174,7 +169,6 @@
             </div>
             <button type="button" class="chip" role="checkbox" id="racesValidated" aria-checked="false">✓ Mes courses</button>
           </div>
-          <p class="hint">Distances à vol d’oiseau depuis le départ choisi dans « Sortie » (ou votre position). « Mes courses » : uniquement celles que vous envisagez, c’est-à-dire ajoutées au planning ou marquées avec le bouton rond (cadre en surbrillance).</p>
         </section>
         <div class="chips" id="racesGroups" role="radiogroup" aria-label="Région"></div>
         <p class="races-count" id="racesCount"></p>
@@ -198,13 +192,12 @@
               </select>
             </div>
           </div>
-          <p class="hint">Ces valeurs servent à estimer la vitesse, la durée et l’effet du vent. L’intensité de chaque séance est un pourcentage de votre FTP.</p>
           <p class="weight-cat" id="weightCat" hidden></p>
           <p class="profile-status" id="profileStatus" role="status" aria-live="polite">Enregistrement automatique sur cet appareil.</p>
         </form>
         <section class="backup" aria-labelledby="backupTitle">
           <h2 class="h2" id="backupTitle">Mes données</h2>
-          <p class="hint">Profil, favoris, cols faits et réglages restent sur ce téléphone. Gardez une copie dans Fichiers ou iCloud Drive pour les retrouver sur un autre appareil.</p>
+          <p class="hint">Données stockées sur ce téléphone uniquement.</p>
           <div class="backup__actions">
             <button type="button" class="btn btn--primary" id="backupSave"><span data-icon="download"></span><span>Sauvegarder mes données</span></button>
             <label class="btn btn--soft" for="backupFile"><span data-icon="upload"></span><span>Restaurer une sauvegarde</span></label>
@@ -212,8 +205,8 @@
           </div>
           <div class="backup__confirm" id="backupConfirm" hidden></div>
         </section>
-        <div class="about">
-          <h2 class="h2">Comment ça marche</h2>
+        <details class="about">
+          <summary class="h2">Comment ça marche</summary>
           <ol class="steps">
             <li>Huit boucles sont tracées autour du départ, une par direction, la première face au vent.</li>
             <li><a href="https://brouter.de" target="_blank" rel="noopener">BRouter</a> les fait passer par de vraies routes OpenStreetMap, en évitant les axes à fort trafic estimé.</li>
@@ -221,7 +214,7 @@
             <li>Le classement combine distance, dénivelé, temps perdu au vent, vent de face à l’aller plutôt qu’au retour, grands axes, chemins et routes empruntées deux fois.</li>
           </ol>
           <p class="hint">La heatmap Strava n’a pas d’accès public : un lien l’ouvre centrée sur votre boucle pour vérifier que les routes sont fréquentées par les cyclistes.</p>
-        </div>
+        </details>
       </section>
 
       <div class="races-bar" id="racesBar" hidden>

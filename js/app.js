@@ -78,7 +78,8 @@ const rider = () => ({
 });
 
 /* ---------- Thème ---------- */
-const isDark = () => (document.documentElement.dataset.theme ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches);
+// Sombre par défaut ; le clair n'est utilisé que s'il a été choisi.
+const isDark = () => document.documentElement.dataset.theme !== 'light';
 function applyTheme(theme) {
   if (theme) document.documentElement.dataset.theme = theme;
   const dark = isDark();
@@ -443,24 +444,21 @@ function renderDistance() {
   renderRider();
 }
 
-/** Allure : zones Z1 à Z4 en % de la FTP, avec fourchette de durée et de vitesse pour la sortie réglée. */
+/** Allure : zones Z1 à Z4 en watts (d'après la FTP) ; la durée dépend ensuite du parcours. */
 function renderRider() {
   const ftp = profile.ftp;
   const mass = profile.weight + profile.bike;
   const km = prefs.mode === 'loop' ? prefs.km : null;
   const ascent = prefs.relief === 'free' && num(prefs.ascent) !== null ? num(prefs.ascent) : km ? km * (RELIEF[prefs.relief]?.climb ?? 9) : 0;
-  const speeds = r => `${Math.round(r.vmin)}–${Math.round(r.vmax)} km/h`;
+  const watts = z => `${Math.round(ftp * z.min)}–${Math.round(ftp * z.max)} W`;
   $('#zoneSwitch').innerHTML = Object.entries(ZONES)
-    .map(([k, z]) => {
-      const r = km ? zoneRange(z, ftp, km, ascent, mass, profile.cda) : null;
-      return `<button type="button" role="radio" data-zone="${k}" aria-checked="${k === prefs.zone}"><strong>${z.label}</strong><small>${r ? speeds(r) : esc(z.name)}</small></button>`;
-    })
+    .map(([k, z]) => `<button type="button" role="radio" data-zone="${k}" aria-checked="${k === prefs.zone}"><strong>${z.label}</strong><small>${watts(z)}</small></button>`)
     .join('');
   const z = ZONES[prefs.zone];
   const r = km ? zoneRange(z, ftp, km, ascent, mass, profile.cda) : null;
-  $('#riderNote').innerHTML = `<strong>${z.label} · ${esc(z.name)}</strong> : ${Math.round(ftp * z.min)}–${Math.round(ftp * z.max)} W (${Math.round(z.min * 100)}–${Math.round(z.max * 100)} % de votre FTP de ${ftp} W)${
-    r ? `. Pour ${km} km et ~${Math.round(ascent)} m D+ : <strong>${fmtDur(r.fast)} à ${fmtDur(r.slow)}</strong>, soit <strong>${speeds(r)}</strong> de moyenne (avant vent et tracé exact ; le calcul des boucles roule à ${Math.round(ftp * z.ftp)} W)` : ''
-  }${profile.custom ? '' : ' — <button type="button" class="link" data-go="profile">renseignez votre profil</button>'}.`;
+  $('#riderNote').innerHTML = `<strong>${esc(z.name)}</strong> · ${Math.round(z.min * 100)}–${Math.round(z.max * 100)} % de FTP${r ? ` · ≈ ${fmtDur(r.fast)} – ${fmtDur(r.slow)}` : ''}${
+    profile.custom ? '' : ` · <button type="button" class="link" data-go="profile">FTP ${ftp} W par défaut</button>`
+  }`;
 }
 
 function renderQuiet() {
