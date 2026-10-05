@@ -1,6 +1,6 @@
 /* Service worker : l'interface fonctionne hors ligne (favoris, GPX) ; itinéraires, météo et
    fonds de carte restent en ligne (tuiles déjà vues servies depuis le cache si possible). */
-const VERSION = 'pv-v18';
+const VERSION = 'pv-v19';
 const SHELL = [
   './', 'index.html', 'manifest.webmanifest', 'css/app.css',
   'vendor/leaflet/leaflet.js', 'vendor/leaflet/leaflet.css', 'vendor/leaflet/images/layers.png', 'vendor/leaflet/images/layers-2x.png',

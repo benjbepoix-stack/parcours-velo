@@ -396,6 +396,8 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 
 /* ---------- Téléphone : carte dans la page, sous le bouton de calcul ---------- */
 .map-slot:empty { display: none; }
+/* La carte forme son propre empilement : ses contrôles Leaflet (z-index 800–1000) restent sous la barre d'onglets. */
+.map-wrap { isolation: isolate; z-index: 0; }
 @media (max-width: 959px) {
   .map-slot .map-wrap { order: 0; height: 52vh; min-height: 300px; border-radius: var(--r-lg); overflow: hidden; border: 1px solid var(--line); }
   .panel { border-top: 0; }
@@ -523,7 +525,8 @@ body { background: var(--bg); }
 .segmented--mode { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
 .segmented--mode button { font-size: 14px; gap: 5px; padding: 0 4px; white-space: nowrap; }
 @media (max-width: 420px) { .segmented--mode button svg.i { display: none; } }
-.range-field__head { justify-content: flex-end; }
+.range-field__head { justify-content: space-between; gap: 16px; }
+.range-field__head .label { margin-right: auto; }
 .race__actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
 .race__date { width: 100%; }
 .race__link { width: 40px; padding: 0; }
