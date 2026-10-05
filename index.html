@@ -29,6 +29,7 @@
       <header class="brand">
         <img class="brand__logo" src="icons/icon.svg" alt="" width="36" height="36">
         <div class="brand__text"><h1 class="brand__title">Échappée</h1><p class="brand__sub">Sortez du peloton, gardez les petites routes</p></div>
+        <button type="button" class="icon-btn" id="tab-profile" data-tab="profile" data-icon="user" aria-pressed="false" aria-label="Profil" title="Profil"></button>
         <button type="button" class="icon-btn" id="themeToggle" aria-label="Changer de thème"></button>
       </header>
 
@@ -37,7 +38,6 @@
         <button type="button" role="tab" id="tab-cols" aria-controls="pane-cols" aria-selected="false" data-tab="cols">Cols</button>
         <button type="button" role="tab" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved">Favoris <span class="count" id="savedCount"></span></button>
         <button type="button" role="tab" id="tab-races" aria-controls="pane-races" aria-selected="false" data-tab="races">Courses</button>
-        <button type="button" role="tab" id="tab-profile" aria-controls="pane-profile" aria-selected="false" data-tab="profile">Profil</button>
       </div>
 
       <!-- ============ SORTIE ============ -->
@@ -162,6 +162,8 @@
       <!-- ============ PROFIL ============ -->
       <section class="pane" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
         <form class="form" id="profileForm" novalidate>
+          <button type="button" class="done-toggle" id="carnetSyncToggle" data-icon="loop" aria-pressed="false" aria-label="Lier automatiquement le FTP et le poids aux dernières valeurs saisies dans l'app Carnet"><span>Lier à Carnet</span></button>
+          <p class="hint" id="carnetSyncStatus" hidden></p>
           <div class="grid2">
             <div class="field"><label class="label" for="p-ftp">FTP · W</label><input class="input" id="p-ftp" name="ftp" inputmode="numeric" autocomplete="off"></div>
             <div class="field"><label class="label" for="p-weight">Poids · kg</label><input class="input" id="p-weight" name="weight" inputmode="decimal" autocomplete="off"></div>

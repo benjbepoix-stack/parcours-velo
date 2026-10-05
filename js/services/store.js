@@ -41,6 +41,11 @@ export const loadSaved = () => {
 };
 export const storeSaved = list => write(KEYS.saved, list);
 
+/* Liaison FTP/poids avec Carnet : réglage local, désactivé par défaut — ne concerne que
+   la personne qui l'active elle-même (ex. un ami utilisant cette app sans Carnet n'est pas affecté). */
+export const loadCarnetSync = () => read('pv_carnet_sync', false) === true;
+export const saveCarnetSync = on => write('pv_carnet_sync', !!on);
+
 export const loadTheme = () => {
   try {
     return localStorage.getItem(KEYS.theme);
@@ -65,7 +70,7 @@ export const loadRacesAdded = () => {
 export const saveRacesAdded = list => write('pv_races_added', list);
 
 /* ---------- Sauvegarde / restauration (fichier JSON) ---------- */
-const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme', 'pv_races_added'];
+const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme', 'pv_races_added', 'pv_carnet_sync'];
 
 /** Toutes les données de l'app, telles qu'enregistrées (texte brut par clé). */
 export function exportBackup() {

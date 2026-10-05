@@ -19,7 +19,7 @@ Application web (installable sur iPhone et Android) qui propose des **boucles et
 - **Export GPX** (Garmin, Wahoo, Komoot, Strava…) via la feuille de partage sur mobile. Komoot n'ouvre pas d'API publique pour créer des parcours : exporter le GPX puis choisir Komoot dans la feuille de partage (ou l'importer sur komoot.com).
 - **Analyse d'un GPX** : « Analyser un fichier GPX » charge une trace existante (Komoot, Strava, Garmin…) et calcule l'effet du vent au jour et à l'heure choisis : vent de face / dos, temps perdu ou gagné, meilleur créneau, profil. Pour une boucle, l'app compare avec le sens inverse et propose de l'inverser si le vent y est plus favorable.
 - **Favoris** : enregistre une boucle, rouvre-la plus tard avec le vent d'un autre jour, renomme, exporte, supprime.
-- **Profil cycliste** : FTP, poids, poids du vélo et position sur le vélo, enregistrés automatiquement à chaque modification.
+- **Profil cycliste** : FTP, poids, poids du vélo et position sur le vélo, enregistrés automatiquement à chaque modification. Le bouton Profil est dans l'en-tête (à côté du thème), pas dans la barre d'onglets. Possibilité de lier FTP et poids aux dernières valeurs de l'app **Carnet** (voir plus bas) ; la saisie manuelle reste toujours possible.
 - **Mes données** (onglet Profil) : « Sauvegarder mes données » crée un fichier `echappee-sauvegarde-AAAA-MM-JJ.json` (profil, favoris, cols faits, réglages) à garder dans Fichiers ou iCloud Drive ; « Restaurer une sauvegarde » le relit, après confirmation, sur le même appareil ou un autre. Chaque personne qui installe l'app a ses propres données, stockées uniquement sur son téléphone.
 - **Heatmap Strava** : lien vers la heatmap centrée sur la boucle pour vérifier que les cyclistes empruntent ces routes. (Strava ne propose pas d'accès public à ses tuiles : elles ne peuvent pas être intégrées au calcul.)
 - Thème clair / sombre, fonctionne hors ligne pour l'interface, les favoris et l'export (le calcul d'itinéraires et la météo demandent du réseau).
@@ -45,7 +45,19 @@ La couverture Franche-Comté/Jura a été complétée et recoupée via le calend
 
 « Ajouter » (une course, ou plusieurs via les cases à cocher et la barre en bas) envoie directement la course dans le planning de l'app **Carnet** (Mon tableau de bord), onglet Courses — via sa base Firebase partagée (même choix assumé, sans mot de passe, que ses autres synchronisations) : pas besoin d'ouvrir Carnet, la course y apparaît dès la prochaine synchronisation. La distance chiffrée est à préciser dans Carnet une fois le format choisi ; le champ note n'est pas pré-rempli, pour rester libre dans Carnet. Détail dans `js/services/carnet-sync.js`.
 
+Une course déjà ajoutée est mise en évidence (fond et liseré teintés) et sa case à cocher se désactive. Le bouton rond à côté du nom permet aussi de **marquer une course comme déjà ajoutée** sans repasser par Carnet (par exemple si elle a été ajoutée à la main ailleurs) ; un nouvel appui retire la marque.
+
 **Mise à jour annuelle** : chaque épreuve porte deux éditions dans `editions: [{year, date, confirmed}, ...]` (en cours / suivante). Une fois par an (idéalement en fin de saison, au moment où les dates de la saison suivante commencent à sortir) : décaler l'édition « suivante » vers « en cours », ajouter une nouvelle édition « suivante » (même date estimée +364 jours en attendant l'annonce officielle), et passer `confirmed: true` dès qu'une date officielle est publiée par l'organisateur.
+
+## Liaison FTP / poids avec Carnet
+
+Dans l'onglet **Profil**, le bouton **« Lier à Carnet »** reprend automatiquement le FTP et le poids depuis les dernières valeurs enregistrées dans l'app **Carnet** (Mon tableau de bord), onglet Mesures — lecture seule, même base Firebase partagée que les autres liaisons entre ces apps.
+
+- **Réglage strictement local, désactivé par défaut** : c'est un choix par appareil, jamais imposé. Une personne qui partage cette app sans utiliser Carnet n'est donc jamais concernée — elle continue à saisir son FTP et son poids à la main, comme avant.
+- Une fois activé, les champs se mettent à jour à l'ouverture de l'app et à chaque passage sur l'onglet Profil. **La saisie manuelle reste toujours possible** : si Carnet n'a encore aucune valeur enregistrée, ou est injoignable (hors ligne), les champs gardent leur dernière valeur et un message l'indique — rien n'est écrasé par une absence de donnée.
+- Un message sous le bouton indique la source et la date de la dernière valeur reprise (ex. « Depuis Carnet : FTP 245 W (3 oct.) · poids 71,2 kg (1 oct.) »), ou explique pourquoi la liaison n'a rien changé.
+
+Détail dans `js/services/carnet-metrics.js`.
 
 ## Plusieurs jours
 

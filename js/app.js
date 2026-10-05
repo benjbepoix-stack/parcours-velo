@@ -7,6 +7,7 @@ import { brouterWebLink } from './services/routing.js';
 import { fetchWind } from './services/wind.js';
 import { suggest, reverse } from './services/geocode.js';
 import * as store from './services/store.js';
+import { fetchCarnetMetrics } from './services/carnet-metrics.js';
 import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
@@ -49,6 +50,7 @@ prefs.km = Math.min(200, Math.max(20, Number(prefs.km) || SESSIONS[prefs.session
 const savePrefs = () => store.savePrefs(prefs);
 
 let profile = store.loadProfile();
+let carnetSync = store.loadCarnetSync();
 let saved = store.loadSaved();
 let result = null; // { routes, wind, windNow, startTime, target, source, loop, kind, note }
 let selected = 0;
@@ -83,10 +85,16 @@ function applyTheme(theme) {
 
 /* ---------- Onglets ---------- */
 function showTab(name) {
-  document.querySelectorAll('[data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === name)));
+  // Le bouton Profil vit dans l'en-tête, hors de la barre d'onglets (role="tablist") :
+  // c'est un simple bouton bascule, donc aria-pressed plutôt qu'aria-selected.
+  document.querySelectorAll('[data-tab]').forEach(b => {
+    const active = b.dataset.tab === name;
+    b.setAttribute(b.getAttribute('role') === 'tab' ? 'aria-selected' : 'aria-pressed', String(active));
+  });
   ['ride', 'cols', 'saved', 'races', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
   if (name === 'saved') renderSaved();
   if (name === 'races') renderRaces();
+  if (name === 'profile') syncFromCarnet({ silent: true });
   setColsActive(name === 'cols');
 }
 
@@ -984,6 +992,52 @@ function fillProfile() {
   f.cda.value = [0.4, 0.36, 0.32].reduce((a, b) => (Math.abs(b - profile.cda) < Math.abs(a - profile.cda) ? b : a)).toFixed(2);
 }
 
+/** « 3 oct. » à partir d'une clé AAAA-MM-JJ, sans décalage de fuseau. */
+function shortDate(key) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(key || '');
+  if (!m) return '';
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+}
+
+function applyCarnetSyncUI() {
+  const btn = $('#carnetSyncToggle');
+  btn.setAttribute('aria-pressed', String(carnetSync));
+  btn.querySelector('span').textContent = carnetSync ? 'Lié à Carnet ✓' : 'Lier à Carnet';
+}
+
+/**
+ * Reprend le FTP et le poids depuis les dernières valeurs de l'onglet Mesures
+ * de Carnet, si la liaison est activée. Réglage strictement local : n'affecte
+ * que la personne qui l'active elle-même (ex. un ami utilisant cette app sans
+ * Carnet n'est jamais concerné). Si Carnet n'a encore rien enregistré ou est
+ * injoignable, la saisie manuelle en cours reste inchangée.
+ */
+async function syncFromCarnet({ silent = false } = {}) {
+  if (!carnetSync) return;
+  const status = $('#carnetSyncStatus');
+  status.hidden = false;
+  try {
+    const { weight, ftp } = await fetchCarnetMetrics();
+    if (!weight && !ftp) {
+      status.textContent = 'Pas encore de FTP ni de poids dans Carnet : saisie manuelle conservée ici.';
+      return;
+    }
+    if (ftp) profile.ftp = Math.round(ftp.value);
+    if (weight) profile.weight = weight.value;
+    profile.custom = true;
+    store.saveProfile(profile);
+    fillProfile();
+    renderWeightCategory();
+    renderRider();
+    const parts = [];
+    if (ftp) parts.push(`FTP ${Math.round(ftp.value)} W (${shortDate(ftp.date)})`);
+    if (weight) parts.push(`poids ${String(weight.value).replace('.', ',')} kg (${shortDate(weight.date)})`);
+    status.textContent = `Depuis Carnet : ${parts.join(' · ')}. Vous pouvez toujours corriger ci-dessous.`;
+  } catch (error) {
+    if (!silent) status.textContent = 'Carnet injoignable pour le moment : les valeurs saisies ici sont conservées.';
+  }
+}
+
 /** Clin d'œil : au-dessus de 82 kg, le cycliste passe dans la catégorie « Gros ». */
 function renderWeightCategory() {
   const w = num($('#p-weight').value);
@@ -1131,6 +1185,8 @@ function init() {
   renderDistance();
   fillProfile();
   renderWeightCategory();
+  applyCarnetSyncUI();
+  if (carnetSync) syncFromCarnet({ silent: true });
   renderSavedCount();
 
   const mapReady = () => {
@@ -1272,6 +1328,17 @@ function init() {
     }
   });
   $('#savedList').addEventListener('click', onSavedAction);
+  $('#carnetSyncToggle').addEventListener('click', () => {
+    carnetSync = !carnetSync;
+    store.saveCarnetSync(carnetSync);
+    applyCarnetSyncUI();
+    if (carnetSync) syncFromCarnet();
+    else {
+      const status = $('#carnetSyncStatus');
+      status.hidden = false;
+      status.textContent = 'Liaison coupée : vos valeurs ne sont plus reprises depuis Carnet.';
+    }
+  });
   const profileForm = $('#profileForm');
   let profileTimer = null;
   profileForm.addEventListener('submit', e => {

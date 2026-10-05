@@ -21,7 +21,7 @@ function addedKey(raceId, year) {
 function raceCard(r) {
   const edition = r.editions[view.yearIdx] || r.editions[0];
   const isAdded = added.has(addedKey(r.id, edition.year));
-  return `<article class="race" data-race="${r.id}">
+  return `<article class="race ${isAdded ? 'is-added' : ''}" data-race="${r.id}">
     <header class="race__head">
       <label class="race__check"><input type="checkbox" data-race-check ${isAdded ? 'disabled' : ''}></label>
       <div class="race__titles">
@@ -29,6 +29,7 @@ function raceCard(r) {
         <p class="race__meta">${esc(r.location)}</p>
         <p class="race__period">${esc(r.period)}${edition.confirmed ? '' : ' · <em>à vérifier</em>'}</p>
       </div>
+      <button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Ajoutée au calendrier · toucher pour retirer la marque' : 'Marquer comme déjà ajoutée au calendrier (sans repasser par Carnet)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>
     </header>
     <p class="race__dist">${esc(r.distance)}</p>
     ${r.notes ? `<p class="race__notes">${esc(r.notes)}</p>` : ''}
@@ -38,6 +39,21 @@ function raceCard(r) {
       <a class="btn btn--soft btn--sm" href="${esc(r.link)}" target="_blank" rel="noopener">Site officiel</a>
     </div>
   </article>`;
+}
+
+/** Marque/démarque manuellement une course comme « déjà ajoutée au calendrier », sans passer par Carnet. */
+function toggleMark(card) {
+  const id = card.dataset.race;
+  const r = RACES.find(x => x.id === id);
+  const edition = r.editions[view.yearIdx] || r.editions[0];
+  const key = addedKey(id, edition.year);
+  const now = !added.has(key);
+  if (now) added.add(key);
+  else added.delete(key);
+  saveAdded();
+  card.outerHTML = raceCard(r);
+  updateBar();
+  toast(now ? 'Marquée comme ajoutée au calendrier' : 'Marque retirée', { type: 'info' });
 }
 
 function updateBar() {
@@ -75,11 +91,8 @@ async function addOne(card, { silent = false } = {}) {
     await addRaceToCarnet({ name: r.name, sport: 'Cyclisme', date, location: r.location });
     added.add(addedKey(id, edition.year));
     saveAdded();
-    card.querySelector('[data-race-check]').checked = false;
-    card.querySelector('[data-race-check]').disabled = true;
-    const btn = card.querySelector('[data-race-action="add"]');
-    btn.disabled = true;
-    btn.innerHTML = `${icon('check', 15)}<span>Ajoutée ✓</span>`;
+    // Reflète tout de suite la marque « ajoutée » (surbrillance + badge), pas seulement le bouton.
+    card.outerHTML = raceCard(r);
     if (!silent) toast(`${r.name} ajoutée au planning de Carnet`);
     return true;
   } catch (error) {
@@ -110,7 +123,9 @@ export function initRaces(h) {
   });
   $('#racesList').addEventListener('click', e => {
     const btn = e.target.closest('[data-race-action="add"]');
-    if (btn) addOne(btn.closest('[data-race]'));
+    if (btn) return addOne(btn.closest('[data-race]'));
+    const markBtn = e.target.closest('[data-race-mark]');
+    if (markBtn) toggleMark(markBtn.closest('[data-race]'));
   });
   $('#racesList').addEventListener('change', e => {
     if (e.target.matches('[data-race-check]')) updateBar();

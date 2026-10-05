@@ -95,7 +95,8 @@ svg.i { width: 18px; height: 18px; flex: none; }
 .brand__text { flex: 1; min-width: 0; }
 .brand__title { font-size: 20px; font-weight: 850; letter-spacing: -.02em; }
 .brand__sub { font-size: 12.5px; color: var(--text-3); }
-.icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); }
+.icon-btn { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); flex: none; }
+.icon-btn[aria-pressed="true"] { background: var(--accent); border-color: transparent; color: var(--accent-ink); }
 
 .segmented { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line); }
 .segmented button { min-height: 36px; border-radius: 10px; font-size: 13.5px; font-weight: 700; color: var(--text-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
@@ -364,17 +365,21 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 .col__stats dt { font-size: 10.5px; color: var(--text-3); font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
 .col__stats dd { margin: 2px 0 0; font: italic 800 16px var(--display); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .col__actions { display: flex; flex-wrap: wrap; gap: 6px; }
-.done-toggle { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--line-2); color: var(--text-2); font-weight: 700; font-size: 13px; margin-right: auto; }
+.done-toggle { display: inline-flex; align-self: flex-start; align-items: center; gap: 6px; min-height: 34px; padding: 0 12px; border-radius: 999px; border: 1.5px solid var(--line-2); color: var(--text-2); font-weight: 700; font-size: 13px; margin-right: auto; }
 .done-toggle svg { opacity: .35; }
 .done-toggle[aria-pressed="true"] { background: var(--tail); border-color: var(--tail); color: #06140d; }
 .done-toggle[aria-pressed="true"] svg { opacity: 1; }
 
 /* Onglet Courses */
-.race { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); margin-bottom: 10px; }
+.race { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); margin-bottom: 10px; transition: background .2s var(--ease), border-color .2s var(--ease); }
+.race.is-added { background: color-mix(in srgb, var(--tail) 7%, var(--surface)); border-color: color-mix(in srgb, var(--tail) 40%, var(--line)); }
 .race__head { display: flex; align-items: flex-start; gap: 10px; }
 .race__check { flex: none; display: flex; align-items: center; padding-top: 2px; }
 .race__check input { width: 20px; height: 20px; }
 .race__titles { flex: 1; min-width: 0; }
+.race__mark { flex: none; align-self: flex-start; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); color: var(--text-3); transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease); }
+.race__mark:hover { border-color: var(--line-2); color: var(--text-2); }
+.race__mark.is-on { background: color-mix(in srgb, var(--tail) 16%, transparent); border-color: color-mix(in srgb, var(--tail) 45%, var(--line)); color: var(--tail); }
 .race__name { font: italic 800 18px/1.15 var(--display); letter-spacing: .01em; }
 .race__meta { font-size: 12.5px; color: var(--text-2); margin-top: 3px; }
 .race__period { font-size: 12px; color: var(--text-3); margin-top: 2px; }
