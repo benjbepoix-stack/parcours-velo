@@ -9,47 +9,51 @@
 @font-face { font-family: "Barlow Condensed"; font-weight: 700; font-style: italic; font-display: swap; src: url("../fonts/barlow-condensed-700-italic.woff2") format("woff2"); }
 @font-face { font-family: "Barlow Condensed"; font-weight: 800; font-style: italic; font-display: swap; src: url("../fonts/barlow-condensed-800-italic.woff2") format("woff2"); }
 
+/* Roadbook : papier clair, encre presque noire, jaune maillot pour les profils et repères.
+   Le thème sombre reste disponible (bouton en haut). */
 :root {
-  /* Bitume, asphalte, gravier, craie ; maillot jaune en accent */
-  --bg: #0b0c0f;
-  --panel: #0f1014;
-  --surface: #17181d;
-  --surface-2: #212329;
-  --line: rgba(247, 247, 242, .06);
-  --line-2: rgba(247, 247, 242, .12);
-  --text: #f7f7f2;
-  --text-2: #b4b6bd;
-  --text-3: #7c7f88;
-  --accent: #ffd400;          /* aplats : boutons, sélection */
-  --accent-ink: #17181c;      /* texte posé sur l'accent */
-  --accent-text: #ffd400;     /* texte et traits en couleur d'accent */
-  --accent-soft: rgba(255, 212, 0, .13);
-  --sky: #7aa7ff;
-  --sky-soft: rgba(122, 167, 255, .14);
-  --amber: #ffb547;
-  --amber-soft: rgba(255, 181, 71, .13);
-  --danger: #ff5c5c;
-  --tail: #2fd38a;
-  --cross: #ff9f1c;
-  --head: #ff5c5c;
-  --casing: #0b0c0e;
-  --shadow: 0 18px 50px -20px rgba(0, 0, 0, .75);
+  --bg: #f3f4f1;
+  --panel: #f3f4f1;
+  --surface: #ffffff;
+  --surface-2: #ecede9;
+  --line: #ecede9;
+  --line-2: #d8d9d4;
+  --text: #1c1d21;
+  --text-2: #4a4b53;
+  --text-3: #6b6c73;
+  --ink: #1c1d21;             /* boutons principaux et sélections */
+  --ink-text: #ffffff;
+  --accent: #ffd400;          /* aplats : profils, repères */
+  --accent-ink: #1c1d21;      /* texte posé sur l'accent */
+  --accent-text: #7a6200;     /* texte et traits en couleur d'accent */
+  --accent-soft: #fffbe0;
+  --sky: #2f63d8;
+  --sky-soft: rgba(47, 99, 216, .1);
+  --amber: #a86a00;
+  --amber-soft: rgba(215, 150, 20, .14);
+  --danger: #b5402d;
+  --tail: #2f8f63;
+  --cross: #8e8f96;
+  --head: #d2553f;
+  --casing: #ffffff;
+  --shadow: 0 6px 20px rgba(28, 29, 33, .08);
   --font: "Barlow", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
-  --r: 12px;
-  --r-lg: 18px;
+  --r: 14px;
+  --r-lg: 20px;
   --ease: cubic-bezier(.2, .8, .2, 1);
-  color-scheme: dark;
-}
-:root[data-theme="light"] {
-  --bg: #ecece6; --panel: #f7f7f2; --surface: #ffffff; --surface-2: #e6e6df;
-  --line: rgba(23, 24, 28, .1); --line-2: rgba(23, 24, 28, .2);
-  --text: #17181c; --text-2: #4e5058; --text-3: #85878f;
-  --accent: #ffd400; --accent-ink: #17181c; --accent-text: #7a6200; --accent-soft: rgba(255, 212, 0, .28);
-  --sky: #2f63d8; --sky-soft: rgba(47, 99, 216, .1); --amber: #a86a00; --amber-soft: rgba(215, 150, 20, .14); --danger: #d63c3c;
-  --tail: #12996a; --cross: #e07b00; --head: #d63c3c; --casing: #ffffff;
-  --shadow: 0 18px 50px -24px rgba(23, 24, 28, .35);
   color-scheme: light;
+}
+:root[data-theme="dark"] {
+  --bg: #0b0c0f; --panel: #0f1014; --surface: #17181d; --surface-2: #212329;
+  --line: rgba(247, 247, 242, .06); --line-2: rgba(247, 247, 242, .12);
+  --text: #f7f7f2; --text-2: #b4b6bd; --text-3: #7c7f88;
+  --ink: #ffd400; --ink-text: #17181c;
+  --accent: #ffd400; --accent-ink: #17181c; --accent-text: #ffd400; --accent-soft: rgba(255, 212, 0, .13);
+  --sky: #7aa7ff; --sky-soft: rgba(122, 167, 255, .14); --amber: #ffb547; --amber-soft: rgba(255, 181, 71, .13); --danger: #ff5c5c;
+  --tail: #2fd38a; --cross: #ff9f1c; --head: #ff5c5c; --casing: #0b0c0e;
+  --shadow: 0 18px 50px -20px rgba(0, 0, 0, .75);
+  color-scheme: dark;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -514,8 +518,8 @@ body { background: var(--bg); }
 .chip { background: var(--surface); border-color: transparent; }
 .btn--soft { background: var(--surface-2); border-color: transparent; }
 .cta .btn--lg { min-height: 56px; border-radius: 18px; box-shadow: 0 14px 30px -14px rgba(255, 212, 0, .55); }
-.tabbar { background: color-mix(in srgb, #08090b 82%, transparent); border-color: var(--line); }
-:root[data-theme="light"] .tabbar { background: color-mix(in srgb, var(--surface) 90%, transparent); }
+.tabbar { background: color-mix(in srgb, var(--surface) 90%, transparent); border-color: var(--line); }
+:root[data-theme="dark"] .tabbar { background: color-mix(in srgb, #08090b 82%, transparent); }
 .tabbar__item[aria-selected="true"] { background: rgba(255, 212, 0, .12); }
 .credits { opacity: .5; font-size: 11px; }
 .about summary { cursor: pointer; font-weight: 750; color: var(--text-2); list-style: none; }
@@ -530,3 +534,56 @@ body { background: var(--bg); }
 .race__actions { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 8px; }
 .race__date { width: 100%; }
 .race__link { width: 40px; padding: 0; }
+
+/* =========================================================
+   Roadbook : cartes blanches arrondies, encre pour l'action,
+   titres d'étape en petites capitales, gros chiffres en italique condensé
+   ========================================================= */
+.panel { gap: 20px; }
+.step__title, .block__title { font: 600 11px/1.3 var(--font); font-style: normal; letter-spacing: .12em; text-transform: uppercase; color: var(--text-3); }
+.relief, .relief-input, .races-around, .note, .race, .range-field, .backup, .forecast, .detail, .saved, .col, .cols-summary, .more, .option { border-radius: var(--r-lg); border-color: transparent; }
+.option { border: 2px solid transparent; }
+.option[aria-selected="true"] { border-color: var(--ink); }
+.detail { box-shadow: var(--shadow); }
+.stat { border-radius: 12px; }
+.btn { border-radius: 16px; }
+.btn--primary { background: var(--ink); color: var(--ink-text); }
+.btn--soft { background: var(--surface); border: 1px solid var(--line-2); }
+:root[data-theme="dark"] .btn--soft { border-color: transparent; background: var(--surface-2); }
+.cta .btn--lg { min-height: 56px; border-radius: 16px; font-size: 22px; letter-spacing: .01em; text-transform: none; box-shadow: 0 14px 30px -16px rgba(28, 29, 33, .6); }
+:root[data-theme="dark"] .cta .btn--lg { box-shadow: 0 14px 30px -14px rgba(255, 212, 0, .55); }
+#submitBtn.is-stale { box-shadow: 0 0 0 3px var(--accent); }
+.chip { border: 1px solid var(--line-2); background: var(--surface); }
+.chip[aria-checked="true"], .relief-free[aria-pressed="true"] { background: var(--ink); color: var(--ink-text); border-color: var(--ink); }
+.segmented { background: var(--surface); padding: 4px; }
+.segmented [aria-checked="true"], .segmented [aria-selected="true"] { background: var(--surface-2); color: var(--text); }
+.segmented--mode [aria-checked="true"], #zoneSwitch button[aria-checked="true"] { background: var(--ink); color: var(--ink-text); }
+#zoneSwitch button[aria-checked="true"] small { color: var(--ink-text); }
+.relief__option[aria-checked="true"] .relief__radio { border-color: var(--ink); }
+.relief__option[aria-checked="true"] .relief__radio::after { background: var(--ink); }
+.input, .stop__input { background: var(--surface); border: 1px solid var(--line-2); }
+:root[data-theme="dark"] .input, :root[data-theme="dark"] .stop__input { border-color: transparent; }
+.input:focus, .stop__input:focus { border-color: var(--ink); }
+.stop--start .stop__badge { background: var(--ink); color: var(--ink-text); }
+.stop--via .stop__badge { background: var(--accent); color: var(--accent-ink); border: 2px solid var(--ink); border-radius: 8px; }
+.add-stop { color: var(--text); }
+.add-stop:hover { background: var(--surface); }
+.icon-btn { background: var(--surface); border-color: var(--line-2); color: var(--text); }
+.icon-btn[aria-pressed="true"] { background: var(--ink); color: var(--ink-text); border-color: transparent; }
+.badge, .count { background: var(--ink); color: var(--ink-text); }
+.col__rank { background: transparent; color: var(--text); font-size: 24px; }
+.races-month { color: var(--text-3); font: 700 11px var(--font); letter-spacing: .12em; text-transform: uppercase; }
+.race.is-added { box-shadow: inset 0 0 0 2px var(--ink); background: var(--surface); }
+.warn { border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: inset 3px 0 0 var(--head); }
+.progress__bar, .mini-track span { background: var(--ink); }
+.done-toggle { border-color: var(--ink); color: var(--text); }
+.weight-cat__badge { background: var(--ink); color: var(--ink-text); }
+.backup__confirm { background: var(--accent-soft); border-color: var(--ink); }
+.strip__h.is-ride { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--ink); }
+/* Barre d'onglets : bande plate en bas, icône + libellé, actif en encre */
+.tabbar { border-radius: 24px; padding: 4px; }
+.tabbar__item { color: var(--text-3); font-size: 11px; font-weight: 600; min-height: 58px; padding-bottom: 8px; }
+.tabbar__icon svg.i { width: 22px; height: 22px; stroke-width: 2; }
+.tabbar__item[aria-selected="true"] { background: transparent; color: var(--text); font-weight: 700; }
+.tabbar__item[aria-selected="true"]::after { content: ""; position: absolute; bottom: 3px; width: 18px; height: 3px; border-radius: 2px; background: var(--accent); }
+:root[data-theme="dark"] .tabbar__item[aria-selected="true"] { color: var(--accent-text); }
