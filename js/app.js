@@ -78,8 +78,8 @@ const rider = () => ({
 });
 
 /* ---------- Thème ---------- */
-// Sombre par défaut ; le clair n'est utilisé que s'il a été choisi.
-const isDark = () => document.documentElement.dataset.theme !== 'light';
+// Clair (« Roadbook ») par défaut ; le sombre n'est utilisé que s'il a été choisi.
+const isDark = () => document.documentElement.dataset.theme === 'dark';
 function applyTheme(theme) {
   if (theme) document.documentElement.dataset.theme = theme;
   const dark = isDark();
