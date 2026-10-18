@@ -1,7 +1,7 @@
 /*
  * Onglet Courses : l'étoile présélectionne une cyclosportive pour la saison (sur cet
- * appareil uniquement) ; le bouton calendrier l'ajoute au planning de l'app
- * Cadence. Rien ne part vers Cadence sans ce bouton.
+ * appareil uniquement, cadre jaune) ; l'icône calendrier l'ajoute au planning de l'app
+ * Cadence et passe au vert. Les deux sont indépendants.
  */
 import * as store from '../services/store.js';
 import { addRaceToCadence } from '../services/cadence-sync.js';
@@ -54,22 +54,19 @@ function raceCard(r) {
   const edition = r.editions[view.yearIdx] || r.editions[0];
   const key = addedKey(r.id, edition.year);
   const isAdded = added.has(key);
-  const isShort = !isAdded && shortlist.has(key);
+  const isShort = shortlist.has(key);
   const km = distanceOf(r);
-  const state = isAdded ? 'is-added' : isShort ? 'is-short' : '';
   const action = isAdded
     ? `<button type="button" class="btn btn--soft btn--sm race__cal is-added" disabled aria-label="Déjà dans le calendrier Cadence" title="Déjà dans le calendrier Cadence">${icon('calendarCheck', 18)}</button>`
-    : `<button type="button" class="btn ${isShort ? 'btn--primary' : 'btn--soft'} btn--sm race__cal" data-race-action="send" aria-label="Ajouter ${esc(r.name)} au calendrier Cadence" title="Ajouter au calendrier Cadence">${icon('calendarAdd', 18)}</button>`;
-  const starred = isAdded || isShort;
-  return `<article class="race ${state}" data-race="${r.id}">
+    : `<button type="button" class="btn btn--soft btn--sm race__cal" data-race-action="send" aria-label="Ajouter ${esc(r.name)} au calendrier Cadence" title="Ajouter au calendrier Cadence">${icon('calendarAdd', 18)}</button>`;
+  return `<article class="race ${isShort ? 'is-short' : ''}" data-race="${r.id}">
     <header class="race__head">
       <div class="race__titles">
         <h3 class="race__name">${esc(r.name)}</h3>
         <p class="race__meta">${esc(r.location)}${km !== null ? ` · <strong class="race__km">${Math.round(km)} km</strong>` : ''}</p>
         <p class="race__date-line">${esc(new Date(`${edition.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }))}${edition.confirmed ? '' : ' <em>· date estimée</em>'}</p>
-        ${isAdded ? '<p class="race__state race__state--ok">Dans le planning de Cadence</p>' : ''}
       </div>
-      <button type="button" class="race__star" data-race-action="star" aria-pressed="${starred}" ${isAdded ? 'disabled' : ''} aria-label="${isAdded ? 'Déjà dans Cadence' : starred ? `Retirer ${esc(r.name)} de ma saison` : `Ajouter ${esc(r.name)} à ma saison`}" title="${isAdded ? 'Déjà dans Cadence' : starred ? 'Retirer de ma saison' : 'Ajouter à ma saison'}">${icon('star', 20)}</button>
+      <button type="button" class="race__star" data-race-action="star" aria-pressed="${isShort}" aria-label="${isShort ? `Retirer ${esc(r.name)} de ma saison` : `Ajouter ${esc(r.name)} à ma saison`}" title="${isShort ? 'Retirer de ma saison' : 'Ajouter à ma saison'}">${icon('star', 20)}</button>
     </header>
     ${/^Plusieurs parcours/.test(r.distance) ? '' : `<p class="race__dist">${esc(r.distance)}</p>`}
     ${notesOf(r) ? `<p class="race__notes">${esc(notesOf(r))}</p>` : ''}
@@ -86,7 +83,6 @@ function setShort(card, on) {
   const r = RACES.find(x => x.id === card.dataset.race);
   const edition = r.editions[view.yearIdx] || r.editions[0];
   const key = addedKey(r.id, edition.year);
-  if (added.has(key)) return false;
   if (on) shortlist.add(key);
   else shortlist.delete(key);
   saveShortlist();
@@ -167,9 +163,7 @@ async function sendOne(card) {
     const outcome = await addRaceToCadence({ name: r.name, sport: 'Cyclisme', date, location: r.location });
     const key = addedKey(id, edition.year);
     added.add(key);
-    shortlist.delete(key);
     saveAdded();
-    saveShortlist();
     refreshCard(card, r);
     toast(outcome === 'exists' ? `${r.name} était déjà dans Cadence` : `${r.name} envoyée à Cadence`);
     return true;
