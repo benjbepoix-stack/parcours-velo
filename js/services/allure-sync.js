@@ -1,5 +1,6 @@
 /*
- * Envoi d'une course vers l'app Allure (et donc le planning de Carnet, qui partage le même nœud).
+ * Liaison avec l'app Allure : envoi des courses validées (et donc dans le planning de Carnet, qui
+ * partage le même nœud) et lecture des dernières valeurs de FTP et de poids.
  *
  * Allure range ses courses dans users/<uid>/carnet/races du projet Firebase commun
  * (même compte e-mail / mot de passe que Mon Garage, Ma Maison, Carnet, Allure et Mon budget).
@@ -123,4 +124,28 @@ export async function addRaceToAllure(race) {
     return [...list, payload];
   });
   return outcome;
+}
+
+/** Dernier relevé valide d'une série de mesures d'Allure ({date, value}). */
+function lastValue(list) {
+  const rows = toList(list)
+    .map(r => ({ date: r.date, value: Number(String(r.value ?? '').replace(',', '.')) }))
+    .filter(r => typeof r.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r.date) && Number.isFinite(r.value) && r.value > 0);
+  if (!rows.length) return null;
+  rows.sort((a, b) => a.date.localeCompare(b.date));
+  return rows[rows.length - 1];
+}
+
+/**
+ * Lecture seule des dernières valeurs de FTP et de poids enregistrées dans Allure (onglet Corps).
+ * @returns {Promise<{weight: {value:number, date:string}|null, ftp: {value:number, date:string}|null}>}
+ * @throws code 'no-account' sans compte connecté, ou si Allure est injoignable
+ */
+export async function fetchAllureMetrics() {
+  const { dbMod, auth, db } = await load();
+  const user = auth.currentUser;
+  if (!user) throw Object.assign(new Error('Connectez-vous à votre compte Allure ci-dessous.'), { code: 'no-account' });
+  const snap = await dbMod.get(dbMod.ref(db, `users/${user.uid}/carnet/bodyMetrics`));
+  const m = snap.exists() ? snap.val() || {} : {};
+  return { weight: lastValue(m.weight), ftp: lastValue(m.ftp) };
 }

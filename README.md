@@ -24,7 +24,7 @@ Application web (installable sur iPhone et Android) qui propose des **boucles et
 - **Export GPX** (Garmin, Wahoo, Komoot, Strava…) via la feuille de partage sur mobile. Komoot n'ouvre pas d'API publique pour créer des parcours : exporter le GPX puis choisir Komoot dans la feuille de partage (ou l'importer sur komoot.com).
 - **Analyse d'un GPX** : « Analyser un fichier GPX » charge une trace existante (Komoot, Strava, Garmin…) et calcule l'effet du vent au jour et à l'heure choisis : vent de face / dos, temps perdu ou gagné, meilleur créneau, profil. Pour une boucle, l'app compare avec le sens inverse et propose de l'inverser si le vent y est plus favorable.
 - **Favoris** : enregistre une boucle, rouvre-la plus tard avec le vent d'un autre jour, renomme, exporte, supprime.
-- **Profil cycliste** : FTP, poids, poids du vélo et position sur le vélo, enregistrés automatiquement à chaque modification. Le bouton Profil est dans l'en-tête (à côté du thème), pas dans la barre d'onglets. Possibilité de lier FTP et poids aux dernières valeurs de l'app **Carnet** (voir plus bas) ; la saisie manuelle reste toujours possible.
+- **Profil cycliste** : FTP, poids, poids du vélo et position sur le vélo, enregistrés automatiquement à chaque modification. Le bouton Profil est dans l'en-tête (à côté du thème), pas dans la barre d'onglets. Possibilité de lier FTP et poids aux dernières valeurs de l'app **Allure** (voir plus bas) ; la saisie manuelle reste toujours possible.
 - **Mes données** (onglet Profil) : « Sauvegarder mes données » crée un fichier `echappee-sauvegarde-AAAA-MM-JJ.json` (profil, favoris, cols faits, réglages) à garder dans Fichiers ou iCloud Drive ; « Restaurer une sauvegarde » le relit, après confirmation, sur le même appareil ou un autre. Chaque personne qui installe l'app a ses propres données, stockées uniquement sur son téléphone.
 - **Heatmap Strava** : lien vers la heatmap centrée sur la boucle pour vérifier que les cyclistes empruntent ces routes. (Strava ne propose pas d'accès public à ses tuiles : elles ne peuvent pas être intégrées au calcul.)
 - Thème clair / sombre, fonctionne hors ligne pour l'interface, les favoris et l'export (le calcul d'itinéraires et la météo demandent du réseau).
@@ -54,15 +54,15 @@ L'envoi passe par le **compte Allure** (même compte e-mail / mot de passe que C
 
 Une course envoyée est cadrée et marquée « Dans le planning d’Allure ». Le bouton rond à côté du nom permet aussi de **marquer une course comme déjà dans Allure** (ajoutée à la main) ; un nouvel appui retire la marque. **✓ Mes courses** affiche les courses présélectionnées et celles déjà dans Allure.
 
-## Liaison FTP / poids avec Carnet
+## Liaison FTP / poids avec Allure
 
-Dans l'onglet **Profil**, le bouton **« Synchroniser mes mesures »** reprend automatiquement le FTP et le poids depuis les dernières valeurs enregistrées dans l'app **Carnet** (Mon tableau de bord), onglet Mesures — lecture seule, même base Firebase partagée que les autres liaisons entre ces apps. Le bouton reste volontairement générique (il ne nomme pas Carnet) : il parlera à tout le monde, y compris à qui n'utilise pas cette app.
+Dans l'onglet **Profil**, le bouton **« Synchroniser mes mesures »** reprend automatiquement le FTP et le poids depuis les dernières valeurs enregistrées dans l'app **Allure**, onglet Corps — lecture seule, avec le même compte que l'envoi des courses (Profil › Compte Allure). Le bouton reste volontairement générique (il ne nomme pas Allure) : il parlera à tout le monde, y compris à qui n'utilise pas cette app.
 
-- **Réglage strictement local, désactivé par défaut** : c'est un choix par appareil, jamais imposé. Une personne qui partage cette app sans utiliser Carnet n'est donc jamais concernée — elle continue à saisir son FTP et son poids à la main, comme avant.
-- Une fois activé, les champs se mettent à jour à l'ouverture de l'app et à chaque passage sur l'onglet Profil. **La saisie manuelle reste toujours possible** : si Carnet n'a encore aucune valeur enregistrée, ou est injoignable (hors ligne), les champs gardent leur dernière valeur et un message l'indique — rien n'est écrasé par une absence de donnée.
-- Un message sous le bouton indique la source et la date de la dernière valeur reprise (ex. « Depuis Carnet : FTP 245 W (3 oct.) · poids 71,2 kg (1 oct.) »), ou explique pourquoi la liaison n'a rien changé.
+- **Réglage strictement local, désactivé par défaut** : c'est un choix par appareil, jamais imposé. Une personne qui partage cette app sans utiliser Allure n'est donc jamais concernée — elle continue à saisir son FTP et son poids à la main, comme avant.
+- Une fois activé, les champs se mettent à jour à l'ouverture de l'app et à chaque passage sur l'onglet Profil. **La saisie manuelle reste toujours possible** : si Allure n'a encore aucune valeur enregistrée, si aucun compte n'est connecté, ou s'il est injoignable (hors ligne), les champs gardent leur dernière valeur et un message l'indique — rien n'est écrasé par une absence de donnée.
+- Un message sous le bouton indique la source et la date de la dernière valeur reprise (ex. « Depuis Allure : FTP 245 W (3 oct.) · poids 71,2 kg (1 oct.) »), ou explique pourquoi la liaison n'a rien changé.
 
-Détail dans `js/services/carnet-metrics.js`.
+Détail dans `js/services/allure-sync.js`.
 
 ## Plusieurs jours
 
