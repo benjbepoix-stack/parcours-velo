@@ -1,6 +1,10 @@
-/* Onglet Courses : cyclosportives à ajouter d'un geste au planning de l'app Carnet. */
+/*
+ * Onglet Courses : cyclosportives à présélectionner pour la saison, puis à envoyer
+ * au planning de l'app Allure une fois le choix validé. Une course présélectionnée
+ * reste sur cet appareil : rien ne part vers Allure tant qu'elle n'est pas validée.
+ */
 import * as store from '../services/store.js';
-import { addRaceToCarnet } from '../services/carnet-sync.js';
+import { addRaceToAllure } from '../services/allure-sync.js';
 import { icon } from './icons.js';
 import { RACES, RACE_GROUPS } from '../data/races.js';
 import { haversine } from '../core/ride.js';
@@ -11,6 +15,8 @@ const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 
 let added = new Set(store.loadRacesAdded());
 const saveAdded = () => store.saveRacesAdded([...added]);
+let shortlist = new Set(store.loadRacesShortlist());
+const saveShortlist = () => store.saveRacesShortlist([...shortlist]);
 
 
 const MAX_RADIUS = 600; // curseur au maximum : toute la France
@@ -32,8 +38,8 @@ const distanceOf = r => {
   const o = origin();
   return o && r.coords ? haversine([o.lat, o.lon], r.coords) / 1000 : null;
 };
-/** Course « retenue » : ajoutée au planning ou marquée (cadre en surbrillance) pour l'édition affichée. */
-const isPicked = (r, edition) => added.has(addedKey(r.id, edition.year));
+/** Course « retenue » pour l'édition affichée : présélectionnée, envoyée à Allure ou marquée comme déjà dedans. */
+const isPicked = (r, edition) => added.has(addedKey(r.id, edition.year)) || shortlist.has(addedKey(r.id, edition.year));
 const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 let toast = () => {};
 
@@ -46,37 +52,78 @@ const notesOf = r => String(r.notes || '').replace(/\s*Ajoutée d’après les c
 
 function raceCard(r) {
   const edition = r.editions[view.yearIdx] || r.editions[0];
-  const isAdded = added.has(addedKey(r.id, edition.year));
+  const key = addedKey(r.id, edition.year);
+  const isAdded = added.has(key);
+  const isShort = !isAdded && shortlist.has(key);
   const km = distanceOf(r);
-  return `<article class="race ${isAdded ? 'is-added' : ''}" data-race="${r.id}">
+  const state = isAdded ? 'is-added' : isShort ? 'is-short' : '';
+  const actions = isAdded
+    ? `<button type="button" class="btn btn--soft btn--sm" disabled>${icon('check', 15)}<span>Dans Allure</span></button>`
+    : isShort
+      ? `<button type="button" class="btn btn--primary btn--sm" data-race-action="send">${icon('check', 15)}<span>Valider · Allure</span></button>`
+      : `<button type="button" class="btn btn--soft btn--sm" data-race-action="short">${icon('star', 15)}<span>Présélectionner</span></button>`;
+  return `<article class="race ${state}" data-race="${r.id}">
     <header class="race__head">
-      <label class="race__check"><input type="checkbox" data-race-check ${isAdded ? 'disabled' : ''}></label>
+      <label class="race__check"><input type="checkbox" data-race-check ${isAdded ? 'disabled' : ''} aria-label="Sélectionner ${esc(r.name)}"></label>
       <div class="race__titles">
         <h3 class="race__name">${esc(r.name)}</h3>
         <p class="race__meta">${esc(r.location)}${km !== null ? ` · <strong class="race__km">${Math.round(km)} km</strong>` : ''}</p>
         <p class="race__date-line">${esc(new Date(`${edition.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }))}${edition.confirmed ? '' : ' <em>· date estimée</em>'}</p>
+        ${isShort ? '<p class="race__state">Présélectionnée · pas encore dans Allure</p>' : ''}
+        ${isAdded ? '<p class="race__state race__state--ok">Dans le planning d’Allure</p>' : ''}
       </div>
-      <button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Ajoutée au calendrier · toucher pour retirer la marque' : 'Marquer comme déjà ajoutée au calendrier (sans repasser par Carnet)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>
+      ${isShort
+        ? `<button type="button" class="race__mark" data-race-action="unshort" aria-label="Retirer de la présélection" title="Retirer de la présélection">${icon('close', 15)}</button>`
+        : `<button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Dans Allure · toucher pour retirer la marque' : 'Marquer comme déjà dans Allure (ajoutée à la main)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>`}
     </header>
     ${/^Plusieurs parcours/.test(r.distance) ? '' : `<p class="race__dist">${esc(r.distance)}</p>`}
     ${notesOf(r) ? `<p class="race__notes">${esc(notesOf(r))}</p>` : ''}
     <div class="race__actions">
       <input type="date" class="input race__date" data-race-date value="${esc(edition.date)}" aria-label="Date de l'édition ${edition.year} pour ${esc(r.name)}">
-      <button type="button" class="btn btn--soft btn--sm" data-race-action="add" ${isAdded ? 'disabled' : ''}>${icon(isAdded ? 'check' : 'plus', 15)}<span>${isAdded ? 'Ajoutée ✓' : 'Ajouter'}</span></button>
+      ${actions}
       <a class="btn btn--soft btn--sm race__link" href="${esc(r.link)}" target="_blank" rel="noopener" aria-label="${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}" title="${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}">${icon('external', 16)}</a>
     </div>
   </article>`;
 }
 
-/** Marque/démarque manuellement une course comme « déjà ajoutée au calendrier », sans passer par Carnet. */
+/** Ajoute ou retire une course de la présélection (sur cet appareil uniquement). */
+function setShort(card, on, { silent = false } = {}) {
+  const r = RACES.find(x => x.id === card.dataset.race);
+  const edition = r.editions[view.yearIdx] || r.editions[0];
+  const key = addedKey(r.id, edition.year);
+  if (added.has(key)) return false;
+  if (on) shortlist.add(key);
+  else shortlist.delete(key);
+  saveShortlist();
+  if (!silent) {
+    refreshCard(card, r);
+    toast(on ? `${r.name} présélectionnée` : 'Retirée de la présélection', { type: 'info' });
+  }
+  return true;
+}
+
+function refreshCard(card, r) {
+  if (!card.isConnected) return;
+  if (view.onlyPicked && !isPicked(r, r.editions[view.yearIdx] || r.editions[0])) renderRaces();
+  else {
+    card.outerHTML = raceCard(r);
+    renderAround();
+  }
+  updateBar();
+}
+
+/** Marque/démarque manuellement une course comme « déjà dans Allure », sans l'envoyer. */
 function toggleMark(card) {
   const id = card.dataset.race;
   const r = RACES.find(x => x.id === id);
   const edition = r.editions[view.yearIdx] || r.editions[0];
   const key = addedKey(id, edition.year);
   const now = !added.has(key);
-  if (now) added.add(key);
-  else added.delete(key);
+  if (now) {
+    added.add(key);
+    shortlist.delete(key);
+    saveShortlist();
+  } else added.delete(key);
   saveAdded();
   if (view.onlyPicked && !now) renderRaces();
   else {
@@ -84,7 +131,7 @@ function toggleMark(card) {
     renderAround();
   }
   updateBar();
-  toast(now ? 'Marquée comme ajoutée au calendrier' : 'Marque retirée', { type: 'info' });
+  toast(now ? 'Marquée comme déjà dans Allure' : 'Marque retirée', { type: 'info' });
 }
 
 function updateBar() {
@@ -144,7 +191,8 @@ export function renderRaces() {
   updateBar();
 }
 
-async function addOne(card, { silent = false } = {}) {
+/** Envoie une course validée au planning d'Allure. */
+async function sendOne(card, { silent = false } = {}) {
   const id = card.dataset.race;
   const r = RACES.find(x => x.id === id);
   const edition = r.editions[view.yearIdx] || r.editions[0];
@@ -154,18 +202,19 @@ async function addOne(card, { silent = false } = {}) {
     return false;
   }
   try {
-    // Carnet attend un nombre de km pour « distance » (plusieurs formats possibles ici) :
-    // laissé vide pour que vous le précisiez une fois le format choisi.
-    await addRaceToCarnet({ name: r.name, sport: 'Cyclisme', date, location: r.location });
-    added.add(addedKey(id, edition.year));
+    // Allure attend un nombre de km pour « distance » (plusieurs parcours possibles ici) : laissé vide, à préciser dans Allure.
+    const outcome = await addRaceToAllure({ name: r.name, sport: 'Cyclisme', date, location: r.location });
+    const key = addedKey(id, edition.year);
+    added.add(key);
+    shortlist.delete(key);
     saveAdded();
-    // Reflète tout de suite la marque « ajoutée » (surbrillance + badge), pas seulement le bouton.
-    card.outerHTML = raceCard(r);
-    renderAround();
-    if (!silent) toast(`${r.name} ajoutée au planning de Carnet`);
+    saveShortlist();
+    refreshCard(card, r);
+    if (!silent) toast(outcome === 'exists' ? `${r.name} était déjà dans Allure` : `${r.name} envoyée à Allure`);
     return true;
   } catch (error) {
-    if (!silent) toast(`Carnet injoignable : ${error.message}`, { error: true });
+    if (!silent || error.code === 'no-account') toast(error.code === 'no-account' ? error.message : `Allure injoignable : ${error.message}`, { error: true });
+    if (error.code === 'no-account') throw error;
     return false;
   }
 }
@@ -233,24 +282,40 @@ export function initRaces(h) {
     renderRaces();
   });
   $('#racesList').addEventListener('click', e => {
-    const btn = e.target.closest('[data-race-action="add"]');
-    if (btn) return addOne(btn.closest('[data-race]'));
+    const btn = e.target.closest('[data-race-action]');
+    if (btn) {
+      const card = btn.closest('[data-race]');
+      if (btn.dataset.raceAction === 'short') return setShort(card, true);
+      if (btn.dataset.raceAction === 'unshort') return setShort(card, false);
+      if (btn.dataset.raceAction === 'send') return sendOne(card).catch(() => {});
+    }
     const markBtn = e.target.closest('[data-race-mark]');
     if (markBtn) toggleMark(markBtn.closest('[data-race]'));
   });
   $('#racesList').addEventListener('change', e => {
     if (e.target.matches('[data-race-check]')) updateBar();
   });
-  $('#racesBarAdd').addEventListener('click', async () => {
-    const cards = $$('#racesList [data-race-check]:checked').map(cb => cb.closest('[data-race]'));
+  const checkedCards = () => $$('#racesList [data-race-check]:checked').map(cb => cb.closest('[data-race]'));
+  $('#racesBarShort').addEventListener('click', () => {
+    const cards = checkedCards();
+    const n = cards.filter(card => setShort(card, true, { silent: true })).length;
+    renderRaces();
+    if (n) toast(`${n} course${n > 1 ? 's' : ''} présélectionnée${n > 1 ? 's' : ''}`);
+  });
+  $('#racesBarSend').addEventListener('click', async () => {
+    const cards = checkedCards();
     if (!cards.length) return;
     let ok = 0;
-    for (const card of cards) {
-      // eslint-disable-next-line no-await-in-loop
-      if (await addOne(card, { silent: true })) ok++;
+    try {
+      for (const card of cards) {
+        // eslint-disable-next-line no-await-in-loop
+        if (await sendOne(card, { silent: true })) ok++;
+      }
+    } catch {
+      return; // pas de compte : message déjà affiché
     }
     updateBar();
-    if (ok) toast(`${ok} course${ok > 1 ? 's' : ''} ajoutée${ok > 1 ? 's' : ''} au planning de Carnet`);
-    if (ok < cards.length) toast(`${cards.length - ok} course(s) n'ont pas pu être ajoutées.`, { error: true });
+    if (ok) toast(`${ok} course${ok > 1 ? 's' : ''} envoyée${ok > 1 ? 's' : ''} à Allure`);
+    if (ok < cards.length) toast(`${cards.length - ok} course(s) n'ont pas pu être envoyées.`, { error: true });
   });
 }
