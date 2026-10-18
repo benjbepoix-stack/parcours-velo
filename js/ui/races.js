@@ -1,7 +1,7 @@
 /*
- * Onglet Courses : cyclosportives à présélectionner pour la saison, puis à envoyer
- * au planning de l'app Cadence une fois le choix validé. Une course présélectionnée
- * reste sur cet appareil : rien ne part vers Cadence tant qu'elle n'est pas validée.
+ * Onglet Courses : l'étoile présélectionne une cyclosportive pour la saison (sur cet
+ * appareil uniquement) ; le bouton « Envoyer à Cadence » l'ajoute au planning de l'app
+ * Cadence. Rien ne part vers Cadence sans ce bouton.
  */
 import * as store from '../services/store.js';
 import { addRaceToCadence } from '../services/cadence-sync.js';
@@ -57,37 +57,32 @@ function raceCard(r) {
   const isShort = !isAdded && shortlist.has(key);
   const km = distanceOf(r);
   const state = isAdded ? 'is-added' : isShort ? 'is-short' : '';
-  const actions = isAdded
+  const action = isAdded
     ? `<button type="button" class="btn btn--soft btn--sm" disabled>${icon('check', 15)}<span>Dans Cadence</span></button>`
-    : isShort
-      ? `<button type="button" class="btn btn--primary btn--sm" data-race-action="send">${icon('check', 15)}<span>Valider · Cadence</span></button>`
-      : `<button type="button" class="btn btn--soft btn--sm" data-race-action="short">${icon('star', 15)}<span>Présélectionner</span></button>`;
+    : `<button type="button" class="btn ${isShort ? 'btn--primary' : 'btn--soft'} btn--sm" data-race-action="send">${icon('calendar', 15)}<span>Envoyer à Cadence</span></button>`;
+  const starred = isAdded || isShort;
   return `<article class="race ${state}" data-race="${r.id}">
     <header class="race__head">
-      <label class="race__check"><input type="checkbox" data-race-check ${isAdded ? 'disabled' : ''} aria-label="Sélectionner ${esc(r.name)}"></label>
       <div class="race__titles">
         <h3 class="race__name">${esc(r.name)}</h3>
         <p class="race__meta">${esc(r.location)}${km !== null ? ` · <strong class="race__km">${Math.round(km)} km</strong>` : ''}</p>
         <p class="race__date-line">${esc(new Date(`${edition.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }))}${edition.confirmed ? '' : ' <em>· date estimée</em>'}</p>
-        ${isShort ? '<p class="race__state">Présélectionnée · pas encore dans Cadence</p>' : ''}
         ${isAdded ? '<p class="race__state race__state--ok">Dans le planning de Cadence</p>' : ''}
       </div>
-      ${isShort
-        ? `<button type="button" class="race__mark" data-race-action="unshort" aria-label="Retirer de la présélection" title="Retirer de la présélection">${icon('close', 15)}</button>`
-        : `<button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Dans Cadence · toucher pour retirer la marque' : 'Marquer comme déjà dans Cadence (ajoutée à la main)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>`}
+      <button type="button" class="race__star" data-race-action="star" aria-pressed="${starred}" ${isAdded ? 'disabled' : ''} aria-label="${isAdded ? 'Déjà dans Cadence' : starred ? `Retirer ${esc(r.name)} de ma saison` : `Ajouter ${esc(r.name)} à ma saison`}" title="${isAdded ? 'Déjà dans Cadence' : starred ? 'Retirer de ma saison' : 'Ajouter à ma saison'}">${icon('star', 20)}</button>
     </header>
     ${/^Plusieurs parcours/.test(r.distance) ? '' : `<p class="race__dist">${esc(r.distance)}</p>`}
     ${notesOf(r) ? `<p class="race__notes">${esc(notesOf(r))}</p>` : ''}
     <div class="race__actions">
       <input type="date" class="input race__date" data-race-date value="${esc(edition.date)}" aria-label="Date de l'édition ${edition.year} pour ${esc(r.name)}">
-      ${actions}
+      ${action}
       <a class="btn btn--soft btn--sm race__link" href="${esc(r.link)}" target="_blank" rel="noopener" aria-label="${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}" title="${/google\.[a-z.]+\/search/.test(r.link) ? 'Rechercher le site' : 'Site officiel'}">${icon('external', 16)}</a>
     </div>
   </article>`;
 }
 
 /** Ajoute ou retire une course de la présélection (sur cet appareil uniquement). */
-function setShort(card, on, { silent = false } = {}) {
+function setShort(card, on) {
   const r = RACES.find(x => x.id === card.dataset.race);
   const edition = r.editions[view.yearIdx] || r.editions[0];
   const key = addedKey(r.id, edition.year);
@@ -95,11 +90,8 @@ function setShort(card, on, { silent = false } = {}) {
   if (on) shortlist.add(key);
   else shortlist.delete(key);
   saveShortlist();
-  if (!silent) {
-    refreshCard(card, r);
-    toast(on ? `${r.name} présélectionnée` : 'Retirée de la présélection', { type: 'info' });
-  }
-  return true;
+  refreshCard(card, r);
+  toast(on ? `${r.name} ajoutée à ma saison` : 'Retirée de ma saison', { type: 'info' });
 }
 
 function refreshCard(card, r) {
@@ -109,36 +101,6 @@ function refreshCard(card, r) {
     card.outerHTML = raceCard(r);
     renderAround();
   }
-  updateBar();
-}
-
-/** Marque/démarque manuellement une course comme « déjà dans Cadence », sans l'envoyer. */
-function toggleMark(card) {
-  const id = card.dataset.race;
-  const r = RACES.find(x => x.id === id);
-  const edition = r.editions[view.yearIdx] || r.editions[0];
-  const key = addedKey(id, edition.year);
-  const now = !added.has(key);
-  if (now) {
-    added.add(key);
-    shortlist.delete(key);
-    saveShortlist();
-  } else added.delete(key);
-  saveAdded();
-  if (view.onlyPicked && !now) renderRaces();
-  else {
-    card.outerHTML = raceCard(r);
-    renderAround();
-  }
-  updateBar();
-  toast(now ? 'Marquée comme déjà dans Cadence' : 'Marque retirée', { type: 'info' });
-}
-
-function updateBar() {
-  const n = $$('#racesList [data-race-check]:checked').length;
-  const bar = $('#racesBar');
-  bar.hidden = n === 0;
-  $('#racesBarCount').textContent = `${n} course${n > 1 ? 's' : ''} sélectionnée${n > 1 ? 's' : ''}`;
 }
 
 function years() {
@@ -188,11 +150,10 @@ export function renderRaces() {
         })
         .join('')
     : '<div class="empty">Aucune course ne correspond.</div>';
-  updateBar();
 }
 
 /** Envoie une course validée au planning de Cadence. */
-async function sendOne(card, { silent = false } = {}) {
+async function sendOne(card) {
   const id = card.dataset.race;
   const r = RACES.find(x => x.id === id);
   const edition = r.editions[view.yearIdx] || r.editions[0];
@@ -210,11 +171,10 @@ async function sendOne(card, { silent = false } = {}) {
     saveAdded();
     saveShortlist();
     refreshCard(card, r);
-    if (!silent) toast(outcome === 'exists' ? `${r.name} était déjà dans Cadence` : `${r.name} envoyée à Cadence`);
+    toast(outcome === 'exists' ? `${r.name} était déjà dans Cadence` : `${r.name} envoyée à Cadence`);
     return true;
   } catch (error) {
-    if (!silent || error.code === 'no-account') toast(error.code === 'no-account' ? error.message : `Cadence injoignable : ${error.message}`, { error: true });
-    if (error.code === 'no-account') throw error;
+    toast(error.code === 'no-account' ? error.message : `Cadence injoignable : ${error.message}`, { error: true });
     return false;
   }
 }
@@ -285,37 +245,8 @@ export function initRaces(h) {
     const btn = e.target.closest('[data-race-action]');
     if (btn) {
       const card = btn.closest('[data-race]');
-      if (btn.dataset.raceAction === 'short') return setShort(card, true);
-      if (btn.dataset.raceAction === 'unshort') return setShort(card, false);
-      if (btn.dataset.raceAction === 'send') return sendOne(card).catch(() => {});
+      if (btn.dataset.raceAction === 'star') return setShort(card, btn.getAttribute('aria-pressed') !== 'true');
+      if (btn.dataset.raceAction === 'send') return sendOne(card);
     }
-    const markBtn = e.target.closest('[data-race-mark]');
-    if (markBtn) toggleMark(markBtn.closest('[data-race]'));
-  });
-  $('#racesList').addEventListener('change', e => {
-    if (e.target.matches('[data-race-check]')) updateBar();
-  });
-  const checkedCards = () => $$('#racesList [data-race-check]:checked').map(cb => cb.closest('[data-race]'));
-  $('#racesBarShort').addEventListener('click', () => {
-    const cards = checkedCards();
-    const n = cards.filter(card => setShort(card, true, { silent: true })).length;
-    renderRaces();
-    if (n) toast(`${n} course${n > 1 ? 's' : ''} présélectionnée${n > 1 ? 's' : ''}`);
-  });
-  $('#racesBarSend').addEventListener('click', async () => {
-    const cards = checkedCards();
-    if (!cards.length) return;
-    let ok = 0;
-    try {
-      for (const card of cards) {
-        // eslint-disable-next-line no-await-in-loop
-        if (await sendOne(card, { silent: true })) ok++;
-      }
-    } catch {
-      return; // pas de compte : message déjà affiché
-    }
-    updateBar();
-    if (ok) toast(`${ok} course${ok > 1 ? 's' : ''} envoyée${ok > 1 ? 's' : ''} à Cadence`);
-    if (ok < cards.length) toast(`${cards.length - ok} course(s) n'ont pas pu être envoyées.`, { error: true });
   });
 }
