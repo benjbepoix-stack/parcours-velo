@@ -587,5 +587,7 @@ body { background: var(--bg); }
 .race__star[aria-pressed="true"] { color: var(--accent); }
 .race__star[aria-pressed="true"] svg { fill: currentColor; }
 .race.is-added .race__star { color: var(--tail); }
+.race__cal { width: 40px; padding: 0; }
+.race__cal.is-added { color: var(--tail); opacity: 1; cursor: default; }
 .race__state { font-size: 12px; font-weight: 700; color: var(--accent-text); margin-top: 4px; }
 .race__state--ok { color: var(--tail); }
