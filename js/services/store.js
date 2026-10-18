@@ -62,18 +62,24 @@ export const loadDone = () => {
 };
 export const saveDone = done => write('pv_cols_done', done);
 
-/* Courses déjà envoyées au planning de Carnet : [idDeCourse, ...] */
+/* Courses envoyées à Allure (ou marquées comme déjà dedans) : ["idDeCourse@année", ...] */
 export const loadRacesAdded = () => {
   const list = read('pv_races_added', []);
   return Array.isArray(list) ? list : [];
 };
 export const saveRacesAdded = list => write('pv_races_added', list);
+/* Courses présélectionnées, gardées sur cet appareil tant qu'elles ne sont pas validées : ["idDeCourse@année", ...] */
+export const loadRacesShortlist = () => {
+  const list = read('pv_races_shortlist', []);
+  return Array.isArray(list) ? list : [];
+};
+export const saveRacesShortlist = list => write('pv_races_shortlist', list);
 /** Réglages de l'onglet Courses (tri, rayon, origine). */
 export const loadRacesView = () => read('pv_races_view', {}) || {};
 export const saveRacesView = v => write('pv_races_view', v);
 
 /* ---------- Sauvegarde / restauration (fichier JSON) ---------- */
-const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme', 'pv_races_added', 'pv_races_view', 'pv_carnet_sync'];
+const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme', 'pv_races_added', 'pv_races_shortlist', 'pv_races_view', 'pv_carnet_sync'];
 
 /** Toutes les données de l'app, telles qu'enregistrées (texte brut par clé). */
 export function exportBackup() {

@@ -2,7 +2,7 @@
  * Lecture seule des dernières valeurs de poids et de FTP enregistrées dans
  * l'app Carnet (Mon tableau de bord), onglet Mesures — via sa base Firebase
  * Realtime Database partagée, sans mot de passe (même choix assumé que les
- * autres liaisons entre ces apps : carnet-sync.js envoie les courses, ici on
+ * autres liaisons entre ces apps : allure-sync.js envoie les courses à Allure, ici on
  * ne fait que lire). Ne concerne que les personnes qui utilisent aussi
  * Carnet : la liaison reste un réglage local, désactivé par défaut, à
  * activer soi-même dans l'onglet Profil (voir #carnetSyncToggle dans app.js).

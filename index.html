@@ -15,7 +15,12 @@
   <link rel="apple-touch-icon" href="icons/icon-180.png">
   <link rel="manifest" href="manifest.webmanifest">
   <script>
-    try { var t = localStorage.getItem('pv_theme'); if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t; } catch (e) {}
+    try {
+      var t = localStorage.getItem('pv_theme');
+      // Passage au style Roadbook (clair) : un ancien choix « sombre » est oublié une seule fois.
+      if (!localStorage.getItem('pv_theme_roadbook')) { if (t === 'dark') { localStorage.removeItem('pv_theme'); t = null; } localStorage.setItem('pv_theme_roadbook', '1'); }
+      if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+    } catch (e) {}
   </script>
   <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="css/app.css">
@@ -195,6 +200,16 @@
           <p class="weight-cat" id="weightCat" hidden></p>
           <p class="profile-status" id="profileStatus" role="status" aria-live="polite">Enregistrement automatique sur cet appareil.</p>
         </form>
+        <section class="backup" aria-labelledby="allureTitle" id="allureAccount">
+          <h2 class="h2" id="allureTitle">Compte Allure</h2>
+          <p class="hint" id="allureStatus">Pour envoyer les courses validées au planning d’Allure.</p>
+          <form class="form" id="allureForm" novalidate hidden>
+            <div class="field"><label class="label" for="allureEmail">E-mail</label><input class="input" id="allureEmail" type="email" autocomplete="username" required></div>
+            <div class="field"><label class="label" for="allurePassword">Mot de passe</label><input class="input" id="allurePassword" type="password" autocomplete="current-password" required></div>
+            <button type="submit" class="btn btn--primary" id="allureSignIn">Se connecter</button>
+          </form>
+          <button type="button" class="btn btn--soft" id="allureSignOut" hidden>Se déconnecter</button>
+        </section>
         <section class="backup" aria-labelledby="backupTitle">
           <h2 class="h2" id="backupTitle">Mes données</h2>
           <p class="hint">Données stockées sur ce téléphone uniquement.</p>
@@ -219,7 +234,10 @@
 
       <div class="races-bar" id="racesBar" hidden>
         <span id="racesBarCount"></span>
-        <button type="button" class="btn btn--primary btn--sm" id="racesBarAdd">Ajouter au planning</button>
+        <span class="races-bar__actions">
+          <button type="button" class="btn btn--soft btn--sm" id="racesBarShort">Présélectionner</button>
+          <button type="button" class="btn btn--primary btn--sm" id="racesBarSend">Envoyer à Allure</button>
+        </span>
       </div>
 
       <nav class="tabbar" role="tablist" aria-label="Sections">

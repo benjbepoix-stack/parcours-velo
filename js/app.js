@@ -8,6 +8,7 @@ import { fetchWind } from './services/wind.js';
 import { suggest, reverse } from './services/geocode.js';
 import * as store from './services/store.js';
 import { fetchCarnetMetrics } from './services/carnet-metrics.js';
+import { allureAccount, signInAllure, signOutAllure } from './services/allure-sync.js';
 import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
@@ -120,7 +121,10 @@ function showTab(name) {
   }
   if (name === 'saved') renderSaved();
   if (name === 'races') renderRaces();
-  if (name === 'profile') syncFromCarnet({ silent: true });
+  if (name === 'profile') {
+    syncFromCarnet({ silent: true });
+    refreshAllureAccount();
+  }
   setColsActive(name === 'cols');
 }
 
@@ -1048,6 +1052,21 @@ function shortDate(key) {
   return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
 }
 
+/** Bloc « Compte Allure » du profil : connecté (e-mail + déconnexion) ou formulaire de connexion. */
+async function refreshAllureAccount(message) {
+  const status = $('#allureStatus');
+  try {
+    const email = await allureAccount();
+    $('#allureForm').hidden = Boolean(email);
+    $('#allureSignOut').hidden = !email;
+    status.textContent = message || (email ? `Connecté : ${email}. Les courses validées partent dans le planning d’Allure.` : 'Connectez-vous avec le compte d’Allure (le même que Carnet) pour y envoyer les courses validées.');
+  } catch {
+    $('#allureForm').hidden = true;
+    $('#allureSignOut').hidden = true;
+    status.textContent = 'Compte injoignable pour le moment (hors ligne ?). Réessayez plus tard.';
+  }
+}
+
 function applyCarnetSyncUI() {
   const btn = $('#carnetSyncToggle');
   btn.setAttribute('aria-pressed', String(carnetSync));
@@ -1403,6 +1422,25 @@ function init() {
     }
   });
   $('#savedList').addEventListener('click', onSavedAction);
+  $('#allureForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const btn = $('#allureSignIn');
+    btn.disabled = true;
+    try {
+      await signInAllure($('#allureEmail').value.trim(), $('#allurePassword').value);
+      $('#allurePassword').value = '';
+      await refreshAllureAccount();
+      toast('Connecté à Allure');
+    } catch (error) {
+      $('#allureStatus').textContent = error.message;
+    } finally {
+      btn.disabled = false;
+    }
+  });
+  $('#allureSignOut').addEventListener('click', async () => {
+    await signOutAllure().catch(() => {});
+    refreshAllureAccount('Déconnecté : les courses restent présélectionnées ici jusqu’à votre prochaine connexion.');
+  });
   $('#carnetSyncToggle').addEventListener('click', () => {
     carnetSync = !carnetSync;
     store.saveCarnetSync(carnetSync);
