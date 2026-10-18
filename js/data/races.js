@@ -3,7 +3,8 @@
  * en direct), plus de 110 épreuves complétées d'après les calendriers 2026
  * (finishers, velo-cyclosport, Miles Republic), couvrant la France entière (régionale Franche-
  * Comté/Jura, Alpes & Provence, Pyrénées, Grand Est & Nord, Bretagne &
- * Normandie, Centre & Sud-Ouest, Occitanie & Corse).
+ * Normandie, Centre & Sud-Ouest, Occitanie & Corse), plus les principales épreuves de Suisse
+ * (Valais, Vaud, Tessin, Grisons, Suisse alémanique).
  *
  * Chaque épreuve porte deux éditions estimées : l'édition « en cours »
  * et la « suivante ». La plupart des dates précises ne sont pas encore
@@ -1362,6 +1363,151 @@ export const RACES = [
     distance: 'Plusieurs parcours (voir site)',
     notes: 'Ajoutée d’après les calendriers 2026 (finishers, velo-cyclosport, Miles Republic) : date 2027 estimée au même jour de la semaine.',
     link: 'https://www.google.com/search?q=Le%20Bocage%20G%C3%A2tinais%20cyclosportive%202027'
+  },
+  // --- Suisse ---
+  {
+    id: 'chatel-chablais-leman-race',
+    name: 'Châtel – Chablais – Léman Race',
+    group: 'suisse',
+    location: 'Champéry (Valais)',
+    coords: [46.18, 6.87],
+    period: 'Juin, date 2027 non annoncée (édition 2026 le 21 juin)',
+    editions: [{ year: 2027, date: '2027-06-20', confirmed: false }, { year: 2028, date: '2028-06-18', confirmed: false }],
+    distance: 'Plusieurs parcours (voir site)',
+    notes: 'Course transfrontalière (Valais et Haute-Savoie). Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Ch%C3%A2tel%20Chablais%20L%C3%A9man%20Race%202027'
+  },
+  {
+    id: 'saentis-classics',
+    name: 'Säntis Classics',
+    group: 'suisse',
+    location: 'Weinfelden (Thurgovie)',
+    coords: [47.57, 9.11],
+    period: 'Juin, date 2027 non annoncée (édition 2026 le 21 juin)',
+    editions: [{ year: 2027, date: '2027-06-20', confirmed: false }, { year: 2028, date: '2028-06-18', confirmed: false }],
+    distance: 'Plusieurs parcours (voir site)',
+    notes: 'Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=S%C3%A4ntis%20Classics%202027'
+  },
+  {
+    id: 'chasing-cancellara-andermatt',
+    name: 'Chasing Cancellara Zurich–Andermatt',
+    group: 'suisse',
+    location: 'Zurich',
+    coords: [47.37, 8.54],
+    period: 'Juin, date 2027 non annoncée (édition 2026 le 27 juin)',
+    editions: [{ year: 2027, date: '2027-06-26', confirmed: false }, { year: 2028, date: '2028-06-24', confirmed: false }],
+    distance: '195 km (4200 m D+), arrivée à Andermatt',
+    notes: 'Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Chasing%20Cancellara%20Zurich%20Andermatt%202027'
+  },
+  {
+    id: 'engadin-radmarathon',
+    name: 'Engadin Radmarathon',
+    group: 'suisse',
+    location: 'Zernez (Grisons)',
+    coords: [46.70, 10.09],
+    period: 'Juillet, date 2027 non annoncée (édition 2026 le 4 juillet)',
+    editions: [{ year: 2027, date: '2027-07-03', confirmed: false }, { year: 2028, date: '2028-07-01', confirmed: false }],
+    distance: 'Plusieurs parcours (voir site)',
+    notes: 'Date 2026 approximative (début juillet), à vérifier. Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Engadin%20Radmarathon%202027'
+  },
+  {
+    id: 'the-majestics-villars',
+    name: 'The Majestics',
+    group: 'suisse',
+    location: 'Villars-sur-Ollon (Vaud)',
+    coords: [46.30, 7.06],
+    period: 'Juillet, date 2027 non annoncée (édition 2026 le 11 juillet)',
+    editions: [{ year: 2027, date: '2027-07-10', confirmed: false }, { year: 2028, date: '2028-07-08', confirmed: false }],
+    distance: 'Plusieurs parcours (voir site)',
+    notes: 'Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=The%20Majestics%20Villars%20v%C3%A9lo%202027'
+  },
+  {
+    id: 'cyclosportive-vins-valais',
+    name: 'Cyclosportive des Vins du Valais',
+    group: 'suisse',
+    location: 'Sion (Valais)',
+    coords: [46.23, 7.36],
+    period: 'Août, date 2027 non annoncée (édition 2026 le 1er août)',
+    editions: [{ year: 2027, date: '2027-07-31', confirmed: false }, { year: 2028, date: '2028-07-29', confirmed: false }],
+    distance: 'Plusieurs parcours (voir site)',
+    notes: 'Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Cyclosportive%20des%20Vins%20du%20Valais%202027'
+  },
+  {
+    id: 'wysam-333',
+    name: 'La Wysam 333',
+    group: 'suisse',
+    location: 'Arnex-sur-Orbe (Vaud)',
+    coords: [46.70, 6.52],
+    period: 'Août, date 2027 non annoncée (édition 2026 le 22 août)',
+    editions: [{ year: 2027, date: '2027-08-21', confirmed: false }, { year: 2028, date: '2028-08-19', confirmed: false }],
+    distance: 'Plusieurs parcours, dont un format très longue distance (voir site)',
+    notes: 'Événement sur deux jours en 2026 (21 et 22 août). Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Wysam%20333%202027'
+  },
+  {
+    id: 'granfondo-san-gottardo',
+    name: 'Granfondo San Gottardo',
+    group: 'suisse',
+    location: 'Ambrì (Tessin)',
+    coords: [46.51, 8.70],
+    period: 'Août, date 2027 non annoncée (édition 2026 le 23 août)',
+    editions: [{ year: 2027, date: '2027-08-22', confirmed: false }, { year: 2028, date: '2028-08-20', confirmed: false }],
+    distance: '52 km / 115 km (3300 m D+)',
+    notes: 'Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Granfondo%20San%20Gottardo%202027'
+  },
+  {
+    id: 'tour-des-stations',
+    name: 'Le Tour des Stations',
+    group: 'suisse',
+    location: 'Le Châble / Verbier (Valais)',
+    coords: [46.08, 7.21],
+    period: 'Août, date 2027 non annoncée (édition 2026 le 29 août)',
+    editions: [{ year: 2027, date: '2027-08-28', confirmed: false }, { year: 2028, date: '2028-08-26', confirmed: false }],
+    distance: '77 km (3000 m D+) / 132 km (4700 m D+) / 186 km (7000 m D+) / 241 km « The Everest » (8848 m D+)',
+    notes: 'Arrivée à Verbier. Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://tourdesstations.ch/'
+  },
+  {
+    id: 'alpenbrevet',
+    name: 'Swiss Cycling Alpenbrevet',
+    group: 'suisse',
+    location: 'Andermatt (Uri)',
+    coords: [46.63, 8.59],
+    period: 'Septembre, date 2027 non annoncée (édition 2026 le 5 septembre)',
+    editions: [{ year: 2027, date: '2027-09-04', confirmed: false }, { year: 2028, date: '2028-09-02', confirmed: false }],
+    distance: 'Plusieurs parcours par les cols alpins, jusqu’à 267 km (6800 m D+)',
+    notes: 'Complet très tôt (liste d’attente en 2026) : s’inscrire dès l’ouverture. Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Alpenbrevet%202027'
+  },
+  {
+    id: 'alpen-challenge-lenzerheide',
+    name: 'Alpen Challenge Lenzerheide',
+    group: 'suisse',
+    location: 'Lenzerheide (Grisons)',
+    coords: [46.73, 9.56],
+    period: 'Septembre, date 2027 non annoncée (édition 2026 le 20 septembre)',
+    editions: [{ year: 2027, date: '2027-09-19', confirmed: false }, { year: 2028, date: '2028-09-17', confirmed: false }],
+    distance: '115 km / 189 km',
+    notes: 'Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Alpen%20Challenge%20Lenzerheide%202027'
+  },
+  {
+    id: 'cyclotour-du-leman',
+    name: 'Cyclotour du Léman',
+    group: 'suisse',
+    location: 'Lausanne (Vaud)',
+    coords: [46.52, 6.63],
+    period: 'Octobre, date 2027 non annoncée (édition 2026 le 18 octobre)',
+    editions: [{ year: 2027, date: '2027-10-17', confirmed: false }, { year: 2028, date: '2028-10-15', confirmed: false }],
+    distance: '64 km / 112 km / 176 km (tour complet du lac)',
+    notes: 'Ajoutée d’après les calendriers 2026 (cycliste.ch, velo-cyclosport, Swiss Cycling) : date 2027 estimée au même jour de la semaine.',
+    link: 'https://www.google.com/search?q=Cyclotour%20du%20L%C3%A9man%202027'
   }
 ];
 
@@ -1375,5 +1521,6 @@ export const RACE_GROUPS = [
   { id: 'ouest', label: 'Ouest (Bretagne, Normandie, Pays de la Loire)' },
   { id: 'idf-centre', label: 'Île-de-France & Centre' },
   { id: 'centre-sud-ouest', label: 'Nouvelle-Aquitaine' },
-  { id: 'sud-corse', label: 'Occitanie & Corse' }
+  { id: 'sud-corse', label: 'Occitanie & Corse' },
+  { id: 'suisse', label: 'Suisse' }
 ];
