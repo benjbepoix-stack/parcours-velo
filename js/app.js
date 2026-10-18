@@ -7,8 +7,7 @@ import { brouterWebLink } from './services/routing.js';
 import { fetchWind } from './services/wind.js';
 import { suggest, reverse } from './services/geocode.js';
 import * as store from './services/store.js';
-import { fetchCarnetMetrics } from './services/carnet-metrics.js';
-import { allureAccount, signInAllure, signOutAllure } from './services/allure-sync.js';
+import { allureAccount, signInAllure, signOutAllure, fetchAllureMetrics } from './services/allure-sync.js';
 import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
@@ -1059,7 +1058,7 @@ async function refreshAllureAccount(message) {
     const email = await allureAccount();
     $('#allureForm').hidden = Boolean(email);
     $('#allureSignOut').hidden = !email;
-    status.textContent = message || (email ? `Connecté : ${email}. Les courses validées partent dans le planning d’Allure.` : 'Connectez-vous avec le compte d’Allure (le même que Carnet) pour y envoyer les courses validées.');
+    status.textContent = message || (email ? `Connecté : ${email}. Les courses validées partent dans le planning d’Allure.` : 'Connectez-vous avec le compte d’Allure (le même que Carnet) pour y envoyer les courses validées et reprendre FTP et poids.');
   } catch {
     $('#allureForm').hidden = true;
     $('#allureSignOut').hidden = true;
@@ -1075,9 +1074,9 @@ function applyCarnetSyncUI() {
 
 /**
  * Reprend le FTP et le poids depuis les dernières valeurs de l'onglet Mesures
- * de Carnet, si la liaison est activée. Réglage strictement local : n'affecte
+ * d'Allure (onglet Corps), si la liaison est activée. Réglage strictement local : n'affecte
  * que la personne qui l'active elle-même (ex. un ami utilisant cette app sans
- * Carnet n'est jamais concerné). Si Carnet n'a encore rien enregistré ou est
+ * Allure n'est jamais concerné). Si Allure n'a encore rien enregistré ou est
  * injoignable, la saisie manuelle en cours reste inchangée.
  */
 async function syncFromCarnet({ silent = false } = {}) {
@@ -1085,9 +1084,9 @@ async function syncFromCarnet({ silent = false } = {}) {
   const status = $('#carnetSyncStatus');
   status.hidden = false;
   try {
-    const { weight, ftp } = await fetchCarnetMetrics();
+    const { weight, ftp } = await fetchAllureMetrics();
     if (!weight && !ftp) {
-      status.textContent = 'Pas encore de FTP ni de poids dans Carnet : saisie manuelle conservée ici.';
+      status.textContent = 'Pas encore de FTP ni de poids dans Allure : saisie manuelle conservée ici.';
       return;
     }
     if (ftp) profile.ftp = Math.round(ftp.value);
@@ -1100,9 +1099,10 @@ async function syncFromCarnet({ silent = false } = {}) {
     const parts = [];
     if (ftp) parts.push(`FTP ${Math.round(ftp.value)} W (${shortDate(ftp.date)})`);
     if (weight) parts.push(`poids ${String(weight.value).replace('.', ',')} kg (${shortDate(weight.date)})`);
-    status.textContent = `Depuis Carnet : ${parts.join(' · ')}. Vous pouvez toujours corriger ci-dessous.`;
+    status.textContent = `Depuis Allure : ${parts.join(' · ')}. Vous pouvez toujours corriger ci-dessous.`;
   } catch (error) {
-    if (!silent) status.textContent = 'Carnet injoignable pour le moment : les valeurs saisies ici sont conservées.';
+    if (error.code === 'no-account') status.textContent = `${error.message} Les valeurs saisies ici sont conservées.`;
+    else if (!silent) status.textContent = 'Allure injoignable pour le moment : les valeurs saisies ici sont conservées.';
   }
 }
 
@@ -1431,6 +1431,7 @@ function init() {
       $('#allurePassword').value = '';
       await refreshAllureAccount();
       toast('Connecté à Allure');
+      if (carnetSync) syncFromCarnet({ silent: true });
     } catch (error) {
       $('#allureStatus').textContent = error.message;
     } finally {
@@ -1449,7 +1450,7 @@ function init() {
     else {
       const status = $('#carnetSyncStatus');
       status.hidden = false;
-      status.textContent = 'Liaison coupée : vos valeurs ne sont plus reprises depuis Carnet.';
+      status.textContent = 'Liaison coupée : vos valeurs ne sont plus reprises depuis Allure.';
     }
   });
   const profileForm = $('#profileForm');
