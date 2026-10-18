@@ -1,6 +1,6 @@
 /*
  * Onglet Courses : l'étoile présélectionne une cyclosportive pour la saison (sur cet
- * appareil uniquement) ; le bouton « Envoyer à Cadence » l'ajoute au planning de l'app
+ * appareil uniquement) ; le bouton calendrier l'ajoute au planning de l'app
  * Cadence. Rien ne part vers Cadence sans ce bouton.
  */
 import * as store from '../services/store.js';
@@ -58,8 +58,8 @@ function raceCard(r) {
   const km = distanceOf(r);
   const state = isAdded ? 'is-added' : isShort ? 'is-short' : '';
   const action = isAdded
-    ? `<button type="button" class="btn btn--soft btn--sm" disabled>${icon('check', 15)}<span>Dans Cadence</span></button>`
-    : `<button type="button" class="btn ${isShort ? 'btn--primary' : 'btn--soft'} btn--sm" data-race-action="send">${icon('calendar', 15)}<span>Envoyer à Cadence</span></button>`;
+    ? `<button type="button" class="btn btn--soft btn--sm race__cal is-added" disabled aria-label="Déjà dans le calendrier Cadence" title="Déjà dans le calendrier Cadence">${icon('calendarCheck', 18)}</button>`
+    : `<button type="button" class="btn ${isShort ? 'btn--primary' : 'btn--soft'} btn--sm race__cal" data-race-action="send" aria-label="Ajouter ${esc(r.name)} au calendrier Cadence" title="Ajouter au calendrier Cadence">${icon('calendarAdd', 18)}</button>`;
   const starred = isAdded || isShort;
   return `<article class="race ${state}" data-race="${r.id}">
     <header class="race__head">
