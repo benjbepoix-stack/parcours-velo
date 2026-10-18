@@ -364,7 +364,6 @@ input[type="range"] { width: 100%; height: 28px; accent-color: var(--accent); }
 
 /* Onglet Courses */
 .race { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); margin-bottom: 10px; transition: background .2s var(--ease), border-color .2s var(--ease); }
-.race.is-added { background: color-mix(in srgb, var(--tail) 7%, var(--surface)); border-color: color-mix(in srgb, var(--tail) 40%, var(--line)); }
 .race__head { display: flex; align-items: flex-start; gap: 10px; }
 .race__titles { flex: 1; min-width: 0; }
 .race__name { font: italic 800 18px/1.15 var(--display); letter-spacing: .01em; }
@@ -502,7 +501,6 @@ body { background: var(--bg); }
 .relief__hint { color: var(--text-3); font-size: 12.5px; }
 .note { font-size: 13px; color: var(--text-2); border-radius: 14px; }
 .race { border-radius: 20px; padding: 16px; gap: 10px; }
-.race.is-added { background: color-mix(in srgb, var(--tail) 9%, var(--surface)); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tail) 55%, transparent); }
 .race__date-line { font-size: 12.5px; color: var(--text-2); margin-top: 3px; }
 .race__date-line em { font-style: normal; color: var(--text-3); }
 .race__dist { color: var(--text-2); font-size: 13px; }
@@ -565,7 +563,6 @@ body { background: var(--bg); }
 .badge, .count { background: var(--ink); color: var(--ink-text); }
 .col__rank { background: transparent; color: var(--text); font-size: 24px; }
 .races-month { color: var(--text-3); font: 700 11px var(--font); letter-spacing: .12em; text-transform: uppercase; }
-.race.is-added { box-shadow: inset 0 0 0 2px var(--ink); background: var(--surface); }
 .warn { border-radius: 14px; background: var(--surface); color: var(--text); box-shadow: inset 3px 0 0 var(--head); }
 .progress__bar, .mini-track span { background: var(--ink); }
 .done-toggle { border-color: var(--ink); color: var(--text); }
@@ -586,8 +583,5 @@ body { background: var(--bg); }
 .race__star:active:not(:disabled) { transform: scale(.88); }
 .race__star[aria-pressed="true"] { color: var(--accent); }
 .race__star[aria-pressed="true"] svg { fill: currentColor; }
-.race.is-added .race__star { color: var(--tail); }
 .race__cal { width: 40px; padding: 0; }
 .race__cal.is-added { color: var(--tail); opacity: 1; cursor: default; }
-.race__state { font-size: 12px; font-weight: 700; color: var(--accent-text); margin-top: 4px; }
-.race__state--ok { color: var(--tail); }
