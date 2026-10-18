@@ -1,10 +1,10 @@
 /*
  * Onglet Courses : cyclosportives à présélectionner pour la saison, puis à envoyer
- * au planning de l'app Allure une fois le choix validé. Une course présélectionnée
- * reste sur cet appareil : rien ne part vers Allure tant qu'elle n'est pas validée.
+ * au planning de l'app Cadence une fois le choix validé. Une course présélectionnée
+ * reste sur cet appareil : rien ne part vers Cadence tant qu'elle n'est pas validée.
  */
 import * as store from '../services/store.js';
-import { addRaceToAllure } from '../services/allure-sync.js';
+import { addRaceToCadence } from '../services/cadence-sync.js';
 import { icon } from './icons.js';
 import { RACES, RACE_GROUPS } from '../data/races.js';
 import { haversine } from '../core/ride.js';
@@ -38,7 +38,7 @@ const distanceOf = r => {
   const o = origin();
   return o && r.coords ? haversine([o.lat, o.lon], r.coords) / 1000 : null;
 };
-/** Course « retenue » pour l'édition affichée : présélectionnée, envoyée à Allure ou marquée comme déjà dedans. */
+/** Course « retenue » pour l'édition affichée : présélectionnée, envoyée à Cadence ou marquée comme déjà dedans. */
 const isPicked = (r, edition) => added.has(addedKey(r.id, edition.year)) || shortlist.has(addedKey(r.id, edition.year));
 const norm = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 let toast = () => {};
@@ -58,9 +58,9 @@ function raceCard(r) {
   const km = distanceOf(r);
   const state = isAdded ? 'is-added' : isShort ? 'is-short' : '';
   const actions = isAdded
-    ? `<button type="button" class="btn btn--soft btn--sm" disabled>${icon('check', 15)}<span>Dans Allure</span></button>`
+    ? `<button type="button" class="btn btn--soft btn--sm" disabled>${icon('check', 15)}<span>Dans Cadence</span></button>`
     : isShort
-      ? `<button type="button" class="btn btn--primary btn--sm" data-race-action="send">${icon('check', 15)}<span>Valider · Allure</span></button>`
+      ? `<button type="button" class="btn btn--primary btn--sm" data-race-action="send">${icon('check', 15)}<span>Valider · Cadence</span></button>`
       : `<button type="button" class="btn btn--soft btn--sm" data-race-action="short">${icon('star', 15)}<span>Présélectionner</span></button>`;
   return `<article class="race ${state}" data-race="${r.id}">
     <header class="race__head">
@@ -69,12 +69,12 @@ function raceCard(r) {
         <h3 class="race__name">${esc(r.name)}</h3>
         <p class="race__meta">${esc(r.location)}${km !== null ? ` · <strong class="race__km">${Math.round(km)} km</strong>` : ''}</p>
         <p class="race__date-line">${esc(new Date(`${edition.date}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }))}${edition.confirmed ? '' : ' <em>· date estimée</em>'}</p>
-        ${isShort ? '<p class="race__state">Présélectionnée · pas encore dans Allure</p>' : ''}
-        ${isAdded ? '<p class="race__state race__state--ok">Dans le planning d’Allure</p>' : ''}
+        ${isShort ? '<p class="race__state">Présélectionnée · pas encore dans Cadence</p>' : ''}
+        ${isAdded ? '<p class="race__state race__state--ok">Dans le planning de Cadence</p>' : ''}
       </div>
       ${isShort
         ? `<button type="button" class="race__mark" data-race-action="unshort" aria-label="Retirer de la présélection" title="Retirer de la présélection">${icon('close', 15)}</button>`
-        : `<button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Dans Allure · toucher pour retirer la marque' : 'Marquer comme déjà dans Allure (ajoutée à la main)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>`}
+        : `<button type="button" class="race__mark ${isAdded ? 'is-on' : ''}" data-race-mark aria-pressed="${isAdded}" title="${isAdded ? 'Dans Cadence · toucher pour retirer la marque' : 'Marquer comme déjà dans Cadence (ajoutée à la main)'}">${icon(isAdded ? 'check' : 'calendar', 15)}</button>`}
     </header>
     ${/^Plusieurs parcours/.test(r.distance) ? '' : `<p class="race__dist">${esc(r.distance)}</p>`}
     ${notesOf(r) ? `<p class="race__notes">${esc(notesOf(r))}</p>` : ''}
@@ -112,7 +112,7 @@ function refreshCard(card, r) {
   updateBar();
 }
 
-/** Marque/démarque manuellement une course comme « déjà dans Allure », sans l'envoyer. */
+/** Marque/démarque manuellement une course comme « déjà dans Cadence », sans l'envoyer. */
 function toggleMark(card) {
   const id = card.dataset.race;
   const r = RACES.find(x => x.id === id);
@@ -131,7 +131,7 @@ function toggleMark(card) {
     renderAround();
   }
   updateBar();
-  toast(now ? 'Marquée comme déjà dans Allure' : 'Marque retirée', { type: 'info' });
+  toast(now ? 'Marquée comme déjà dans Cadence' : 'Marque retirée', { type: 'info' });
 }
 
 function updateBar() {
@@ -191,7 +191,7 @@ export function renderRaces() {
   updateBar();
 }
 
-/** Envoie une course validée au planning d'Allure. */
+/** Envoie une course validée au planning de Cadence. */
 async function sendOne(card, { silent = false } = {}) {
   const id = card.dataset.race;
   const r = RACES.find(x => x.id === id);
@@ -202,18 +202,18 @@ async function sendOne(card, { silent = false } = {}) {
     return false;
   }
   try {
-    // Allure attend un nombre de km pour « distance » (plusieurs parcours possibles ici) : laissé vide, à préciser dans Allure.
-    const outcome = await addRaceToAllure({ name: r.name, sport: 'Cyclisme', date, location: r.location });
+    // Cadence attend un nombre de km pour « distance » (plusieurs parcours possibles ici) : laissé vide, à préciser dans Cadence.
+    const outcome = await addRaceToCadence({ name: r.name, sport: 'Cyclisme', date, location: r.location });
     const key = addedKey(id, edition.year);
     added.add(key);
     shortlist.delete(key);
     saveAdded();
     saveShortlist();
     refreshCard(card, r);
-    if (!silent) toast(outcome === 'exists' ? `${r.name} était déjà dans Allure` : `${r.name} envoyée à Allure`);
+    if (!silent) toast(outcome === 'exists' ? `${r.name} était déjà dans Cadence` : `${r.name} envoyée à Cadence`);
     return true;
   } catch (error) {
-    if (!silent || error.code === 'no-account') toast(error.code === 'no-account' ? error.message : `Allure injoignable : ${error.message}`, { error: true });
+    if (!silent || error.code === 'no-account') toast(error.code === 'no-account' ? error.message : `Cadence injoignable : ${error.message}`, { error: true });
     if (error.code === 'no-account') throw error;
     return false;
   }
@@ -315,7 +315,7 @@ export function initRaces(h) {
       return; // pas de compte : message déjà affiché
     }
     updateBar();
-    if (ok) toast(`${ok} course${ok > 1 ? 's' : ''} envoyée${ok > 1 ? 's' : ''} à Allure`);
+    if (ok) toast(`${ok} course${ok > 1 ? 's' : ''} envoyée${ok > 1 ? 's' : ''} à Cadence`);
     if (ok < cards.length) toast(`${cards.length - ok} course(s) n'ont pas pu être envoyées.`, { error: true });
   });
 }
