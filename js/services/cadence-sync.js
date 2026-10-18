@@ -1,21 +1,21 @@
 /*
- * Liaison avec l'app Allure : envoi des courses validées (et donc dans le planning de Carnet, qui
+ * Liaison avec l'app Cadence : envoi des courses validées (et donc dans le planning de Carnet, qui
  * partage le même nœud) et lecture des dernières valeurs de FTP et de poids.
  *
- * Allure range ses courses dans users/<uid>/carnet/races du projet Firebase commun
- * (même compte e-mail / mot de passe que Mon Garage, Ma Maison, Carnet, Allure et Mon budget).
+ * Cadence range ses courses dans users/<uid>/carnet/races du projet Firebase commun
+ * (même compte e-mail / mot de passe que Mon Garage, Ma Maison, Carnet, Cadence et Mon budget).
  * - La session Firebase est partagée par toutes les apps servies à la même adresse
- *   (benjbepoix-stack.github.io) : déjà connecté dans Allure = connecté ici. Une app installée
+ *   (benjbepoix-stack.github.io) : déjà connecté dans Cadence = connecté ici. Une app installée
  *   sur l'écran d'accueil de l'iPhone a son propre stockage : une connexion, une seule fois.
  * - L'ajout passe par une transaction sur la seule tranche `races` : les autres données
- *   d'Allure et de Carnet ne sont jamais réécrites, et une course déjà présente (même nom,
+ *   de Cadence et de Carnet ne sont jamais réécrites, et une course déjà présente (même nom,
  *   même date) n'est pas dupliquée.
- * - Tant que le nœud du compte n'a pas été migré par Allure ou Carnet (marqueur `migrated`),
+ * - Tant que le nœud du compte n'a pas été migré par Cadence ou Carnet (marqueur `migrated`),
  *   rien n'est écrit : on risquerait d'empêcher la reprise des anciennes courses.
  * Le SDK est chargé à la demande : sans réseau, le reste de l'app fonctionne normalement.
  */
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0';
-/* Valeurs publiques par conception (comme dans Allure) : les données sont protégées par le compte. */
+/* Valeurs publiques par conception (comme dans Cadence) : les données sont protégées par le compte. */
 const CONFIG = {
   apiKey: 'AIzaSyAdtuzUxcc7JIxtYDXh3dPmrXMP3HePBT4',
   authDomain: 'test-e27e9.firebaseapp.com',
@@ -39,7 +39,7 @@ function load() {
       ]).catch(() => {
         throw new Error('hors ligne ? Réessayez avec du réseau.');
       });
-      // Application « par défaut », comme Allure : la session enregistrée par Allure est reprise telle quelle.
+      // Application « par défaut », comme Cadence : la session enregistrée par Cadence est reprise telle quelle.
       const app = appMod.getApps()[0] || appMod.initializeApp(CONFIG);
       const auth = authMod.getAuth(app);
       await authMod.setPersistence(auth, authMod.browserLocalPersistence).catch(() => {});
@@ -54,12 +54,12 @@ function load() {
 }
 
 /** @returns {Promise<string|null>} e-mail du compte connecté, ou null */
-export async function allureAccount() {
+export async function cadenceAccount() {
   const { auth } = await load();
   return auth.currentUser ? auth.currentUser.email || 'Compte connecté' : null;
 }
 
-export async function signInAllure(email, password) {
+export async function signInCadence(email, password) {
   const { authMod, auth } = await load();
   try {
     await authMod.signInWithEmailAndPassword(auth, email, password);
@@ -68,7 +68,7 @@ export async function signInAllure(email, password) {
   }
 }
 
-export async function signOutAllure() {
+export async function signOutCadence() {
   const { authMod, auth } = await load();
   await authMod.signOut(auth);
 }
@@ -86,17 +86,17 @@ const toList = v => (Array.isArray(v) ? v : v && typeof v === 'object' ? Object.
 const same = (a, b) => String(a.name || '').trim().toLowerCase() === String(b.name || '').trim().toLowerCase() && a.date === b.date;
 
 /**
- * Ajoute une course au planning d'Allure.
+ * Ajoute une course au planning de Cadence.
  * @param {{name:string, sport?:string, date:string, location?:string}} race
  * @returns {Promise<'added'|'exists'>}
  */
-export async function addRaceToAllure(race) {
+export async function addRaceToCadence(race) {
   const { dbMod, auth, db } = await load();
   const user = auth.currentUser;
-  if (!user) throw Object.assign(new Error('Connectez-vous à votre compte Allure (Profil).'), { code: 'no-account' });
+  if (!user) throw Object.assign(new Error('Connectez-vous à votre compte Cadence (Profil).'), { code: 'no-account' });
   const root = `users/${user.uid}/carnet`;
   const migrated = await dbMod.get(dbMod.ref(db, `${root}/migrated`));
-  if (!migrated.exists()) throw new Error('Ouvrez Allure une fois pour préparer votre compte, puis réessayez.');
+  if (!migrated.exists()) throw new Error('Ouvrez Cadence une fois pour préparer votre compte, puis réessayez.');
   const payload = {
     id: makeId(),
     name: String(race.name || '').slice(0, 100),
@@ -126,7 +126,7 @@ export async function addRaceToAllure(race) {
   return outcome;
 }
 
-/** Dernier relevé valide d'une série de mesures d'Allure ({date, value}). */
+/** Dernier relevé valide d'une série de mesures de Cadence ({date, value}). */
 function lastValue(list) {
   const rows = toList(list)
     .map(r => ({ date: r.date, value: Number(String(r.value ?? '').replace(',', '.')) }))
@@ -137,14 +137,14 @@ function lastValue(list) {
 }
 
 /**
- * Lecture seule des dernières valeurs de FTP et de poids enregistrées dans Allure (onglet Corps).
+ * Lecture seule des dernières valeurs de FTP et de poids enregistrées dans Cadence (onglet Suivi).
  * @returns {Promise<{weight: {value:number, date:string}|null, ftp: {value:number, date:string}|null}>}
- * @throws code 'no-account' sans compte connecté, ou si Allure est injoignable
+ * @throws code 'no-account' sans compte connecté, ou si Cadence est injoignable
  */
-export async function fetchAllureMetrics() {
+export async function fetchCadenceMetrics() {
   const { dbMod, auth, db } = await load();
   const user = auth.currentUser;
-  if (!user) throw Object.assign(new Error('Connectez-vous à votre compte Allure ci-dessous.'), { code: 'no-account' });
+  if (!user) throw Object.assign(new Error('Connectez-vous à votre compte Cadence ci-dessous.'), { code: 'no-account' });
   const snap = await dbMod.get(dbMod.ref(db, `users/${user.uid}/carnet/bodyMetrics`));
   const m = snap.exists() ? snap.val() || {} : {};
   return { weight: lastValue(m.weight), ftp: lastValue(m.ftp) };

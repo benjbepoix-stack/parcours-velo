@@ -62,7 +62,7 @@ export const loadDone = () => {
 };
 export const saveDone = done => write('pv_cols_done', done);
 
-/* Courses envoyées à Allure (ou marquées comme déjà dedans) : ["idDeCourse@année", ...] */
+/* Courses envoyées à Cadence (ou marquées comme déjà dedans) : ["idDeCourse@année", ...] */
 export const loadRacesAdded = () => {
   const list = read('pv_races_added', []);
   return Array.isArray(list) ? list : [];

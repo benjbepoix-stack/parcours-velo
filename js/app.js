@@ -7,7 +7,7 @@ import { brouterWebLink } from './services/routing.js';
 import { fetchWind } from './services/wind.js';
 import { suggest, reverse } from './services/geocode.js';
 import * as store from './services/store.js';
-import { allureAccount, signInAllure, signOutAllure, fetchAllureMetrics } from './services/allure-sync.js';
+import { cadenceAccount, signInCadence, signOutCadence, fetchCadenceMetrics } from './services/cadence-sync.js';
 import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
@@ -122,7 +122,7 @@ function showTab(name) {
   if (name === 'races') renderRaces();
   if (name === 'profile') {
     syncFromCarnet({ silent: true });
-    refreshAllureAccount();
+    refreshCadenceAccount();
   }
   setColsActive(name === 'cols');
 }
@@ -1051,17 +1051,17 @@ function shortDate(key) {
   return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' }).format(new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
 }
 
-/** Bloc « Compte Allure » du profil : connecté (e-mail + déconnexion) ou formulaire de connexion. */
-async function refreshAllureAccount(message) {
-  const status = $('#allureStatus');
+/** Bloc « Compte Cadence » du profil : connecté (e-mail + déconnexion) ou formulaire de connexion. */
+async function refreshCadenceAccount(message) {
+  const status = $('#cadenceStatus');
   try {
-    const email = await allureAccount();
-    $('#allureForm').hidden = Boolean(email);
-    $('#allureSignOut').hidden = !email;
-    status.textContent = message || (email ? `Connecté : ${email}. Les courses validées partent dans le planning d’Allure.` : 'Connectez-vous avec le compte d’Allure (le même que Carnet) pour y envoyer les courses validées et reprendre FTP et poids.');
+    const email = await cadenceAccount();
+    $('#cadenceForm').hidden = Boolean(email);
+    $('#cadenceSignOut').hidden = !email;
+    status.textContent = message || (email ? `Connecté : ${email}. Les courses validées partent dans le planning de Cadence.` : 'Connectez-vous avec le compte de Cadence (le même que Carnet) pour y envoyer les courses validées et reprendre FTP et poids.');
   } catch {
-    $('#allureForm').hidden = true;
-    $('#allureSignOut').hidden = true;
+    $('#cadenceForm').hidden = true;
+    $('#cadenceSignOut').hidden = true;
     status.textContent = 'Compte injoignable pour le moment (hors ligne ?). Réessayez plus tard.';
   }
 }
@@ -1074,9 +1074,9 @@ function applyCarnetSyncUI() {
 
 /**
  * Reprend le FTP et le poids depuis les dernières valeurs de l'onglet Mesures
- * d'Allure (onglet Corps), si la liaison est activée. Réglage strictement local : n'affecte
+ * de Cadence (onglet Suivi), si la liaison est activée. Réglage strictement local : n'affecte
  * que la personne qui l'active elle-même (ex. un ami utilisant cette app sans
- * Allure n'est jamais concerné). Si Allure n'a encore rien enregistré ou est
+ * Cadence n'est jamais concerné). Si Cadence n'a encore rien enregistré ou est
  * injoignable, la saisie manuelle en cours reste inchangée.
  */
 async function syncFromCarnet({ silent = false } = {}) {
@@ -1084,9 +1084,9 @@ async function syncFromCarnet({ silent = false } = {}) {
   const status = $('#carnetSyncStatus');
   status.hidden = false;
   try {
-    const { weight, ftp } = await fetchAllureMetrics();
+    const { weight, ftp } = await fetchCadenceMetrics();
     if (!weight && !ftp) {
-      status.textContent = 'Pas encore de FTP ni de poids dans Allure : saisie manuelle conservée ici.';
+      status.textContent = 'Pas encore de FTP ni de poids dans Cadence : saisie manuelle conservée ici.';
       return;
     }
     if (ftp) profile.ftp = Math.round(ftp.value);
@@ -1099,10 +1099,10 @@ async function syncFromCarnet({ silent = false } = {}) {
     const parts = [];
     if (ftp) parts.push(`FTP ${Math.round(ftp.value)} W (${shortDate(ftp.date)})`);
     if (weight) parts.push(`poids ${String(weight.value).replace('.', ',')} kg (${shortDate(weight.date)})`);
-    status.textContent = `Depuis Allure : ${parts.join(' · ')}. Vous pouvez toujours corriger ci-dessous.`;
+    status.textContent = `Depuis Cadence : ${parts.join(' · ')}. Vous pouvez toujours corriger ci-dessous.`;
   } catch (error) {
     if (error.code === 'no-account') status.textContent = `${error.message} Les valeurs saisies ici sont conservées.`;
-    else if (!silent) status.textContent = 'Allure injoignable pour le moment : les valeurs saisies ici sont conservées.';
+    else if (!silent) status.textContent = 'Cadence injoignable pour le moment : les valeurs saisies ici sont conservées.';
   }
 }
 
@@ -1422,25 +1422,25 @@ function init() {
     }
   });
   $('#savedList').addEventListener('click', onSavedAction);
-  $('#allureForm').addEventListener('submit', async e => {
+  $('#cadenceForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const btn = $('#allureSignIn');
+    const btn = $('#cadenceSignIn');
     btn.disabled = true;
     try {
-      await signInAllure($('#allureEmail').value.trim(), $('#allurePassword').value);
-      $('#allurePassword').value = '';
-      await refreshAllureAccount();
-      toast('Connecté à Allure');
+      await signInCadence($('#cadenceEmail').value.trim(), $('#cadencePassword').value);
+      $('#cadencePassword').value = '';
+      await refreshCadenceAccount();
+      toast('Connecté à Cadence');
       if (carnetSync) syncFromCarnet({ silent: true });
     } catch (error) {
-      $('#allureStatus').textContent = error.message;
+      $('#cadenceStatus').textContent = error.message;
     } finally {
       btn.disabled = false;
     }
   });
-  $('#allureSignOut').addEventListener('click', async () => {
-    await signOutAllure().catch(() => {});
-    refreshAllureAccount('Déconnecté : les courses restent présélectionnées ici jusqu’à votre prochaine connexion.');
+  $('#cadenceSignOut').addEventListener('click', async () => {
+    await signOutCadence().catch(() => {});
+    refreshCadenceAccount('Déconnecté : les courses restent présélectionnées ici jusqu’à votre prochaine connexion.');
   });
   $('#carnetSyncToggle').addEventListener('click', () => {
     carnetSync = !carnetSync;
@@ -1450,7 +1450,7 @@ function init() {
     else {
       const status = $('#carnetSyncStatus');
       status.hidden = false;
-      status.textContent = 'Liaison coupée : vos valeurs ne sont plus reprises depuis Allure.';
+      status.textContent = 'Liaison coupée : vos valeurs ne sont plus reprises depuis Cadence.';
     }
   });
   const profileForm = $('#profileForm');
