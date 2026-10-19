@@ -242,3 +242,11 @@ test('parseGPX relit les GPX exportés par l’app et refuse les autres fichiers
   assert.throws(() => R.parseGPX('<html></html>'), /pas un GPX/);
   assert.throws(() => R.parseGPX('<gpx></gpx>'), /Aucune trace/);
 });
+
+test('kmForDuration est l’inverse d’estimateDuration', () => {
+  const km = R.kmForDuration(3 * 3600, 9, 160, 80);
+  assert.ok(Math.abs(R.estimateDuration(km, km * 9, 160, 80) - 3 * 3600) < 1);
+  // ~27 km/h en Z2 : 3 h ≈ 80 km
+  assert.ok(km > 70 && km < 90, `km=${km}`);
+  assert.ok(R.kmForDuration(3600, 16, 160, 80) < R.kmForDuration(3600, 4, 160, 80));
+});

@@ -41,6 +41,8 @@
       <!-- ============ SORTIE ============ -->
       <section class="pane" id="pane-ride" role="tabpanel" aria-labelledby="tab-ride">
         <form class="form" id="rideForm" novalidate>
+          <section class="quick" id="quick" aria-live="polite"></section>
+          <button type="button" class="view-switch" id="viewSwitch"></button>
           <div class="segmented segmented--mode" id="modeSwitch" role="radiogroup" aria-label="Type de parcours">
             <button type="button" role="radio" data-mode="loop" aria-checked="true"><span data-icon="loop"></span>Boucle</button>
             <button type="button" role="radio" data-mode="oneway" aria-checked="false"><span data-icon="arrow"></span>Aller simple</button>

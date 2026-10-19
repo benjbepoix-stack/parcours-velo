@@ -1,10 +1,10 @@
 /*
  * Onglet Courses : l'étoile présélectionne une cyclosportive pour la saison (sur cet
  * appareil uniquement, cadre jaune) ; l'icône calendrier l'ajoute au planning de l'app
- * Cadence et passe au vert. Les deux sont indépendants.
+ * Cadence et passe au vert ; un nouvel appui l'en retire (et la décoche). Les deux sont indépendants.
  */
 import * as store from '../services/store.js';
-import { addRaceToCadence } from '../services/cadence-sync.js';
+import { addRaceToCadence, removeRaceFromCadence } from '../services/cadence-sync.js';
 import { icon } from './icons.js';
 import { RACES, RACE_GROUPS } from '../data/races.js';
 import { haversine } from '../core/ride.js';
@@ -57,8 +57,8 @@ function raceCard(r) {
   const isShort = shortlist.has(key);
   const km = distanceOf(r);
   const action = isAdded
-    ? `<button type="button" class="btn btn--soft btn--sm race__cal is-added" disabled aria-label="Déjà dans le calendrier Cadence" title="Déjà dans le calendrier Cadence">${icon('calendarCheck', 18)}</button>`
-    : `<button type="button" class="btn btn--soft btn--sm race__cal" data-race-action="send" aria-label="Ajouter ${esc(r.name)} au calendrier Cadence" title="Ajouter au calendrier Cadence">${icon('calendarAdd', 18)}</button>`;
+    ? `<button type="button" class="btn btn--soft btn--sm race__cal is-added" data-race-action="unsend" aria-pressed="true" aria-label="${esc(r.name)} est dans le calendrier Cadence : toucher pour l'en retirer" title="Dans le calendrier Cadence · toucher pour retirer">${icon('calendarCheck', 18)}</button>`
+    : `<button type="button" class="btn btn--soft btn--sm race__cal" data-race-action="send" aria-pressed="false" aria-label="Ajouter ${esc(r.name)} au calendrier Cadence" title="Ajouter au calendrier Cadence">${icon('calendarAdd', 18)}</button>`;
   return `<article class="race ${isShort ? 'is-short' : ''}" data-race="${r.id}">
     <header class="race__head">
       <div class="race__titles">
@@ -173,6 +173,30 @@ async function sendOne(card) {
   }
 }
 
+/** Décoche l'envoi : retire la course du planning de Cadence, et la décoche ici dans tous les cas. */
+async function unsendOne(card, btn) {
+  const r = RACES.find(x => x.id === card.dataset.race);
+  const edition = r.editions[view.yearIdx] || r.editions[0];
+  const date = card.querySelector('[data-race-date]').value;
+  btn.disabled = true;
+  let message;
+  try {
+    const outcome = await removeRaceFromCadence({ name: r.name, dates: [date, edition.date] });
+    message =
+      outcome === 'kept'
+        ? `${r.name} décochée ici, mais gardée dans Cadence : vous y avez ajouté des infos.`
+        : outcome === 'missing'
+          ? `${r.name} décochée (elle n'était plus dans Cadence).`
+          : `${r.name} retirée de Cadence`;
+  } catch (error) {
+    message = `${r.name} décochée ici. ${error.code === 'no-account' ? error.message : 'Cadence injoignable'} : elle reste dans Cadence pour l'instant.`;
+  }
+  added.delete(addedKey(r.id, edition.year));
+  saveAdded();
+  refreshCard(card, r);
+  toast(message, { type: 'info' });
+}
+
 /** @param {{toast:Function}} h */
 export function initRaces(h) {
   toast = h.toast;
@@ -241,6 +265,7 @@ export function initRaces(h) {
       const card = btn.closest('[data-race]');
       if (btn.dataset.raceAction === 'star') return setShort(card, btn.getAttribute('aria-pressed') !== 'true');
       if (btn.dataset.raceAction === 'send') return sendOne(card);
+      if (btn.dataset.raceAction === 'unsend') return unsendOne(card, btn);
     }
   });
 }
