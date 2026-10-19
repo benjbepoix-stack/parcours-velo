@@ -75,11 +75,18 @@ export const loadRacesShortlist = () => {
 };
 export const saveRacesShortlist = list => write('pv_races_shortlist', list);
 /** Réglages de l'onglet Courses (tri, rayon, origine). */
+/* Lieux enregistrés (Maison, Travail…) : [{ id, name, lat, lon, label }] */
+export const loadPlaces = () => {
+  const list = read('pv_places', []);
+  return Array.isArray(list) ? list.filter(p => p && p.name && Number.isFinite(p.lat) && Number.isFinite(p.lon)) : [];
+};
+export const savePlaces = list => write('pv_places', list);
+
 export const loadRacesView = () => read('pv_races_view', {}) || {};
 export const saveRacesView = v => write('pv_races_view', v);
 
 /* ---------- Sauvegarde / restauration (fichier JSON) ---------- */
-const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme', 'pv_races_added', 'pv_races_shortlist', 'pv_races_view', 'pv_carnet_sync'];
+const BACKUP_KEYS = ['pv_profile', 'pv_prefs', 'pv_saved', 'pv_cols_done', 'pv_theme', 'pv_races_added', 'pv_races_shortlist', 'pv_races_view', 'pv_carnet_sync', 'pv_places'];
 
 /** Toutes les données de l'app, telles qu'enregistrées (texte brut par clé). */
 export function exportBackup() {

@@ -221,7 +221,6 @@ function renderStops() {
   if (prefs.mode === 'loop') rows.push(`<li class="stop stop--return"><span class="stop__badge" aria-hidden="true">${icon('loop', 14)}</span><div class="stop__body"><span class="stop__static">Retour au départ</span></div></li>`);
   $('#stops').innerHTML = rows.join('');
   $('#addVia').querySelector('span:last-child').textContent = prefs.vias.length ? 'Ajouter un autre passage' : 'Ajouter un point de passage';
-  if (prefs.view === 'quick') renderQuick(); // le récapitulatif affiche le point de départ
 }
 
 function syncMap() {
@@ -385,17 +384,23 @@ function quickDuration({ zone, relief, km }) {
 
 /** Les réponses aux questions rapides règlent le formulaire (boucle, séance, terrain, distance, départ). */
 function applyQuick(a) {
-  if (prefs.mode !== 'loop') setMode('loop');
+  const point = p => ({ lat: p.lat, lon: p.lon, name: p.name || null });
+  prefs.mode = a.mode;
+  prefs.start = point(a.start);
+  if (a.mode !== 'loop') prefs.end = point(a.end);
+  if (a.mode === 'multi') prefs.days = clampDays(a.days);
   prefs.zone = a.zone;
-  prefs.relief = a.relief;
-  prefs.km = a.km;
+  if (a.mode !== 'multi') prefs.relief = a.relief;
+  if (a.mode === 'loop') prefs.km = a.km;
   const other = a.day !== 'today' && a.day !== 'tomorrow';
   setDay(other ? 'other' : a.day);
   if (other) $('#f-date').value = a.day;
   $('#f-time').value = a.time;
   savePrefs();
+  renderMode();
+  renderStops();
+  syncMap();
   renderRelief();
-  renderDistance();
   invalidateResult();
   refreshTime();
 }
@@ -1300,17 +1305,15 @@ function init() {
     saved: prefs.quick,
     duration: quickDuration,
     currentKm: () => prefs.km,
-    startName: () => prefs.start?.name || 'Départ choisi sur la carte',
+    currentDays: () => prefs.days,
+    currentStart: () => (isPoint(prefs.start) ? { ...prefs.start } : null),
     apply: applyQuick,
     save: a => {
-      prefs.quick = { zone: a.zone, relief: a.relief, km: a.km };
+      const keep = p => (isPoint(p) ? { lat: p.lat, lon: p.lon, name: p.name || null, placeId: p.placeId || null } : undefined);
+      prefs.quick = { mode: a.mode, start: keep(a.start), end: keep(a.end), days: a.days, zone: a.zone, relief: a.relief, km: a.km };
       savePrefs();
     },
-    details: () => {
-      setView('full');
-      $('[data-stop="start"] .stop__input')?.focus();
-    },
-    locate
+    toast
   });
   if (prefs.view === 'quick' && quickAnswers()) applyQuick(quickAnswers());
   renderView();
