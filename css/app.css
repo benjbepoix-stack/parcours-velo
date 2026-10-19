@@ -623,3 +623,14 @@ body { background: var(--bg); }
 .quick__big { font: italic 800 40px/1 var(--display); }
 .quick__sub { font-size: 13px; color: var(--text-2); margin-top: -6px; }
 .quick__time { font-size: 22px; min-height: 56px; text-align: center; background: var(--panel); }
+.quick__place { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 6px; }
+.quick__del { width: 44px; display: grid; place-items: center; border-radius: var(--r-lg); color: var(--text-3); }
+.quick__choice--inline { flex-direction: row; align-items: center; gap: 10px; min-height: 52px; }
+.quick__suggest { display: flex; flex-direction: column; gap: 2px; list-style: none; margin: 0; padding: 0; }
+.quick__suggest:empty { display: none; }
+.quick__suggest button { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 1px; padding: 10px 12px; border-radius: 12px; background: var(--panel); text-align: left; }
+.quick__suggest span, .quick__empty { font-size: 12.5px; color: var(--text-2); }
+.quick__empty { padding: 8px 12px; }
+.quick__add { align-self: flex-start; margin-left: 0; }
+.quick__here { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; }
+.quick__cancel { align-self: center; }
