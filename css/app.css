@@ -619,3 +619,7 @@ body { background: var(--bg); }
 .quick__row--start { grid-template-columns: 96px minmax(0, 1fr); }
 .quick__start-actions { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
 .quick__start-actions .chip { display: inline-flex; align-items: center; gap: 6px; }
+.quick__field { display: flex; flex-direction: column; gap: 12px; padding: 16px; border-radius: var(--r-lg); background: var(--surface); }
+.quick__big { font: italic 800 40px/1 var(--display); }
+.quick__sub { font-size: 13px; color: var(--text-2); margin-top: -6px; }
+.quick__time { font-size: 22px; min-height: 56px; text-align: center; background: var(--panel); }

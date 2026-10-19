@@ -92,16 +92,6 @@ export function estimateDuration(km, ascent, power, mass, cda = CDA) {
   return flat + climb * 0.25;
 }
 
-/**
- * Distance (km) parcourue en `seconds` avec `climbPerKm` m de D+ par km : inverse
- * d'estimateDuration, qui est proportionnelle à la distance à dénivelé par km constant.
- */
-export function kmForDuration(seconds, climbPerKm, power, mass, cda = CDA) {
-  if (!seconds || !power) return null;
-  const perKm = 1000 / speedFor(power, 0, 0, mass, cda) + ((mass * G * climbPerKm) / power) * 0.25;
-  return seconds / perKm;
-}
-
 /** Fourchette pour une zone : bas de zone (lent) → haut de zone (rapide), en secondes et km/h. */
 export function zoneRange(zone, ftp, km, ascent, mass, cda = CDA) {
   const slow = estimateDuration(km, ascent, ftp * zone.min, mass, cda);

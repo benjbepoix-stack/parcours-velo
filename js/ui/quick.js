@@ -1,42 +1,31 @@
 /*
- * Questions rapides de l'onglet Étape : quatre questions, une par écran, une touche par
- * réponse (séance, terrain, durée, départ), puis un récapitulatif et « Trouver mes boucles ».
- * Les réponses règlent le formulaire détaillé, qui reste accessible à tout moment.
+ * Questions rapides de l'onglet Étape : quatre questions, une par écran (séance, terrain,
+ * distance, départ), puis un récapitulatif et « Trouver mes boucles ». Séance et terrain
+ * se choisissent d'une touche ; distance (curseur) et départ (jour + heure exacte) se
+ * valident avec « Suivant ». Les réponses règlent le formulaire détaillé, toujours accessible.
  */
 import { icon } from './icons.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const fmtHours = h => (h < 1 ? `${Math.round(h * 60)} min` : `${Math.floor(h)} h${h % 1 ? ` ${String(Math.round((h % 1) * 60)).padStart(2, '0')}` : ''}`);
-const hhmm = d => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+const pad = n => String(n).padStart(2, '0');
+const DAYS = { today: 'Aujourd’hui', tomorrow: 'Demain' };
 
 /** Prochain quart d'heure, au moins dix minutes plus tard (le temps de s'habiller). */
-function soon() {
+function soonTime() {
   const d = new Date(Date.now() + 10 * 60000);
   d.setSeconds(0, 0);
   d.setMinutes(Math.ceil(d.getMinutes() / 15) * 15);
-  return d;
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
-const at = (days, h) => {
-  const d = new Date();
-  d.setDate(d.getDate() + days);
-  d.setHours(h, 0, 0, 0);
-  return d;
-};
-/** Créneaux de départ proposés (« Ce soir » seulement s'il est encore temps). */
-export const WHEN = {
-  now: { label: 'Maintenant', date: soon },
-  evening: { label: 'Ce soir', date: () => at(0, 18), available: () => new Date().getHours() < 17 },
-  morning: { label: 'Demain matin', date: () => at(1, 9) },
-  afternoon: { label: 'Demain après-midi', date: () => at(1, 14) }
-};
+const validTime = t => /^([01]\d|2[0-3]):[0-5]\d$/.test(t || '');
 
 const QUESTIONS = [
   {
     key: 'zone',
     title: 'Quelle séance ?',
     short: 'Séance',
-    choices: () => [
+    choices: [
       { value: 'z1', label: 'Récup', sub: 'Très facile, jambes légères' },
       { value: 'z2', label: 'Endurance', sub: 'On peut discuter' },
       { value: 'z3', label: 'Tempo', sub: 'Soutenu mais régulier' },
@@ -47,28 +36,14 @@ const QUESTIONS = [
     key: 'relief',
     title: 'Quel terrain ?',
     short: 'Terrain',
-    choices: () => [
+    choices: [
       { value: 'flat', label: 'Plat', sub: 'Le moins de côtes possible' },
       { value: 'hilly', label: 'Vallonné', sub: 'Des côtes en plus' },
       { value: 'any', label: 'Peu importe', sub: 'Les routes les plus prisées' }
     ]
   },
-  {
-    key: 'hours',
-    title: 'Combien de temps ?',
-    short: 'Durée',
-    grid: true,
-    choices: a => [1, 1.5, 2, 2.5, 3, 4, 5].map(h => ({ value: h, label: fmtHours(h), sub: `≈ ${ctx.estimateKm({ ...a, hours: h })} km` }))
-  },
-  {
-    key: 'when',
-    title: 'Départ quand ?',
-    short: 'Départ',
-    choices: () =>
-      Object.entries(WHEN)
-        .filter(([, w]) => !w.available || w.available())
-        .map(([value, w]) => ({ value, label: w.label, sub: hhmm(w.date()) }))
-  }
+  { key: 'km', title: 'Quelle distance ?', short: 'Distance' },
+  { key: 'when', title: 'Départ quand ?', short: 'Départ' }
 ];
 const RECAP = QUESTIONS.length;
 
@@ -76,33 +51,65 @@ let ctx = null;
 let answers = {};
 let step = 0;
 let fromRecap = false;
+// Valeurs en cours de réglage (curseur, jour, heure), validées par « Suivant ».
+let draft = {};
 
 const complete = () => QUESTIONS.every(q => answers[q.key] !== undefined && answers[q.key] !== null);
-const labelOf = (q, value) => q.choices(answers).find(c => c.value === value);
+const durationText = km => {
+  const d = ctx.duration({ ...answers, km });
+  return d ? `≈ ${d}` : '';
+};
+
+function valueText(q) {
+  const a = answers[q.key];
+  if (q.choices) return q.choices.find(c => c.value === a)?.label || '';
+  if (q.key === 'km') return `${a} km · ${durationText(a)}`;
+  return `${DAYS[a.day]} · ${a.time}`;
+}
+
+function renderInput(q) {
+  if (q.key === 'km') {
+    const km = draft.km;
+    return `<div class="quick__field">
+        <output class="quick__big" id="quickKmOut">${km} km</output>
+        <small class="quick__sub" id="quickKmSub">${esc(durationText(km))}</small>
+        <input type="range" id="quickKm" min="20" max="200" step="5" value="${km}" aria-labelledby="quickTitle" aria-valuetext="${km} kilomètres">
+      </div>
+      <button type="button" class="btn btn--primary btn--lg" data-quick-next>Suivant</button>`;
+  }
+  return `<div class="quick__field">
+      <div class="segmented segmented--two" role="radiogroup" aria-label="Jour">
+        ${Object.entries(DAYS).map(([k, l]) => `<button type="button" role="radio" data-quick-day="${k}" aria-checked="${draft.day === k}">${l}</button>`).join('')}
+      </div>
+      <input class="input quick__time" id="quickTime" type="time" step="300" value="${esc(draft.time)}" aria-label="Heure de départ">
+    </div>
+    <button type="button" class="btn btn--primary btn--lg" data-quick-next>Suivant</button>`;
+}
 
 function renderQuestion(i) {
   const q = QUESTIONS[i];
-  const choices = q.choices(answers);
+  const body = q.choices
+    ? `<div class="quick__choices" role="radiogroup" aria-labelledby="quickTitle">
+      ${q.choices
+        .map(
+          c => `<button type="button" class="quick__choice" role="radio" aria-checked="${answers[q.key] === c.value}" data-quick-value="${esc(c.value)}">
+        <strong>${esc(c.label)}</strong><small>${esc(c.sub)}</small></button>`
+        )
+        .join('')}
+    </div>`
+    : renderInput(q);
   return `<div class="quick__progress" aria-hidden="true"><span style="--value:${((i + 1) / RECAP) * 100}%"></span></div>
     <div class="quick__top">
       ${i > 0 || fromRecap ? `<button type="button" class="quick__back" data-quick-back aria-label="Question précédente">${icon('chevron', 16)}<span>Retour</span></button>` : '<span></span>'}
       <span class="quick__count">${i + 1} / ${RECAP}</span>
     </div>
     <h2 class="quick__title" id="quickTitle">${esc(q.title)}</h2>
-    <div class="quick__choices ${q.grid ? 'quick__choices--grid' : ''}" role="radiogroup" aria-labelledby="quickTitle">
-      ${choices
-        .map(
-          c => `<button type="button" class="quick__choice" role="radio" aria-checked="${answers[q.key] === c.value}" data-quick-value="${esc(c.value)}">
-        <strong>${esc(c.label)}</strong><small>${esc(c.sub)}</small></button>`
-        )
-        .join('')}
-    </div>`;
+    ${body}`;
 }
 
 function renderRecap() {
   const rows = QUESTIONS.map((q, i) => {
-    const c = labelOf(q, answers[q.key]);
-    const value = q.key === 'hours' ? `${c?.label} · ${c?.sub}` : `${c?.label}${q.key === 'when' ? ` · ${c?.sub}` : ''}`;
+    const value = valueText(q);
     return `<button type="button" class="quick__row" data-quick-go="${i}" aria-label="${esc(q.short)} : ${esc(value)}. Modifier">
       <span class="quick__row-label">${esc(q.short)}</span><strong>${esc(value)}</strong><span class="quick__row-edit">${icon('edit', 15)}</span></button>`;
   }).join('');
@@ -121,63 +128,99 @@ function renderRecap() {
 
 export function renderQuick() {
   if (!ctx) return;
-  const host = $('#quick');
-  host.innerHTML = step >= RECAP ? renderRecap() : renderQuestion(step);
+  if (step < RECAP) {
+    const key = QUESTIONS[step].key;
+    if (key === 'km') draft.km = draft.km ?? answers.km ?? ctx.currentKm();
+    if (key === 'when') {
+      draft.day = draft.day ?? answers.when?.day ?? 'today';
+      draft.time = draft.time ?? answers.when?.time ?? soonTime();
+    }
+  }
+  $('#quick').innerHTML = step >= RECAP ? renderRecap() : renderQuestion(step);
   $('#rideForm').classList.toggle('is-asking', step < RECAP);
 }
 
-function choose(value) {
-  const q = QUESTIONS[step];
-  answers[q.key] = q.key === 'hours' ? Number(value) : value;
-  if (complete()) ctx.apply({ ...answers });
-  ctx.save({ ...answers });
-  step = fromRecap || step + 1 >= RECAP ? (complete() ? RECAP : QUESTIONS.findIndex(x => answers[x.key] == null)) : step + 1;
-  if (step === RECAP) fromRecap = false;
+function goTo(next) {
+  step = next;
+  draft = {};
   renderQuick();
-  $('#quick').querySelector('.quick__choice[aria-checked="true"], .quick__choice, .quick__row')?.focus({ preventScroll: true });
 }
 
-/** Les réponses du jour : le créneau de départ est toujours reposé (« Maintenant » par défaut). */
+function answer(key, value) {
+  answers[key] = value;
+  if (complete()) ctx.apply({ ...answers });
+  ctx.save({ ...answers });
+  const next = fromRecap || step + 1 >= RECAP ? (complete() ? RECAP : QUESTIONS.findIndex(x => answers[x.key] == null)) : step + 1;
+  if (next === RECAP) fromRecap = false;
+  goTo(next);
+  $('#quick').querySelector('.quick__choice[aria-checked="true"], .quick__choice, #quickKm, #quickTime, .quick__row')?.focus({ preventScroll: true });
+}
+
+/** Réponses complètes, ou null. */
 export function quickAnswers() {
   return complete() ? { ...answers } : null;
 }
 
 /**
- * @param {{saved: object|null, estimateKm: (a:object) => number, startName: () => string,
+ * @param {{saved: object|null, duration: (a:object) => string, currentKm: () => number, startName: () => string,
  *   apply: (a:object) => void, save: (a:object) => void, details: () => void, locate: () => void}} c
  */
 export function initQuick(c) {
   ctx = c;
   const saved = c.saved && typeof c.saved === 'object' ? c.saved : {};
+  const km = Number(saved.km);
   answers = {
     zone: ['z1', 'z2', 'z3', 'z4'].includes(saved.zone) ? saved.zone : undefined,
     relief: ['flat', 'hilly', 'any'].includes(saved.relief) ? saved.relief : undefined,
-    hours: [1, 1.5, 2, 2.5, 3, 4, 5].includes(saved.hours) ? saved.hours : undefined,
+    km: km >= 20 && km <= 200 ? Math.round(km / 5) * 5 : undefined,
     when: undefined
   };
-  // Le créneau de départ n'a de sens que le jour même : il repart sur « Maintenant ».
-  if (answers.zone && answers.relief && answers.hours) answers.when = 'now';
+  // L'heure de départ n'a de sens que le jour même : elle repart sur aujourd'hui, au prochain quart d'heure.
+  if (answers.zone && answers.relief && answers.km) answers.when = { day: 'today', time: soonTime() };
   step = complete() ? RECAP : 0;
-  $('#quick').addEventListener('click', e => {
+  const host = $('#quick');
+  host.addEventListener('input', e => {
+    if (e.target.id === 'quickKm') {
+      draft.km = Number(e.target.value);
+      e.target.setAttribute('aria-valuetext', `${draft.km} kilomètres`);
+      $('#quickKmOut').textContent = `${draft.km} km`;
+      $('#quickKmSub').textContent = durationText(draft.km);
+    }
+    if (e.target.id === 'quickTime') draft.time = e.target.value;
+  });
+  host.addEventListener('click', e => {
     const t = e.target;
     const choice = t.closest('[data-quick-value]');
-    if (choice) return choose(choice.dataset.quickValue);
+    if (choice) return answer(QUESTIONS[step].key, choice.dataset.quickValue);
+    const day = t.closest('[data-quick-day]');
+    if (day) {
+      draft.day = day.dataset.quickDay;
+      host.querySelectorAll('[data-quick-day]').forEach(b => b.setAttribute('aria-checked', String(b === day)));
+      return;
+    }
+    if (t.closest('[data-quick-next]')) {
+      const key = QUESTIONS[step].key;
+      if (key === 'km') return answer('km', draft.km);
+      if (!validTime(draft.time)) {
+        $('#quickTime').setAttribute('aria-invalid', 'true');
+        return $('#quickTime').focus();
+      }
+      return answer('when', { day: draft.day, time: draft.time });
+    }
     const go = t.closest('[data-quick-go]');
     if (go) {
-      step = Number(go.dataset.quickGo);
       fromRecap = true;
-      return renderQuick();
+      return goTo(Number(go.dataset.quickGo));
     }
     if (t.closest('[data-quick-back]')) {
-      step = fromRecap ? RECAP : Math.max(0, step - 1);
+      const back = fromRecap ? RECAP : Math.max(0, step - 1);
       fromRecap = false;
-      return renderQuick();
+      return goTo(back);
     }
     if (t.closest('[data-quick-restart]')) {
       answers = {};
-      step = 0;
       fromRecap = false;
-      return renderQuick();
+      return goTo(0);
     }
     if (t.closest('[data-quick-locate]')) return ctx.locate();
     if (t.closest('[data-quick-details]')) return ctx.details();

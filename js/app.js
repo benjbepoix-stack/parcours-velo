@@ -1,5 +1,5 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
-import { RELIEF, ZONES, zoneRange, kmForDuration, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
+import { RELIEF, ZONES, zoneRange, estimateDuration, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
 import { planMultiDay, clampDays, stageGPX, MIN_DAYS, MAX_DAYS } from './core/trip.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
@@ -13,7 +13,7 @@ import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
 import { initCols, setColsActive } from './ui/cols.js';
 import { initRaces, renderRaces } from './ui/races.js';
-import { initQuick, renderQuick, quickAnswers, WHEN } from './ui/quick.js';
+import { initQuick, renderQuick, quickAnswers } from './ui/quick.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -377,10 +377,10 @@ function onStopsClick(e) {
 }
 
 /* ---------- Questions rapides ↔ réglages détaillés ---------- */
-/** Distance d'une boucle tenue en `hours` dans la zone et sur le terrain choisis, au pas du curseur. */
-function estimateKm({ zone, relief, hours }) {
-  const km = kmForDuration(hours * 3600, RELIEF[relief]?.climb ?? 9, profile.ftp * ZONES[zone || 'z2'].ftp, profile.weight + profile.bike, profile.cda);
-  return Math.min(200, Math.max(20, Math.round(km / 5) * 5));
+/** Durée estimée d'une boucle de `km` dans la zone et sur le terrain choisis. */
+function quickDuration({ zone, relief, km }) {
+  const d = estimateDuration(km, km * (RELIEF[relief]?.climb ?? 9), profile.ftp * ZONES[zone || 'z2'].ftp, profile.weight + profile.bike, profile.cda);
+  return d ? fmtDur(d) : '';
 }
 
 /** Les réponses aux questions rapides règlent le formulaire (boucle, séance, terrain, distance, départ). */
@@ -388,12 +388,9 @@ function applyQuick(a) {
   if (prefs.mode !== 'loop') setMode('loop');
   prefs.zone = a.zone;
   prefs.relief = a.relief;
-  prefs.km = estimateKm(a);
-  const when = (WHEN[a.when] || WHEN.now).date();
-  const days = Math.round((new Date(when).setHours(0, 0, 0, 0) - new Date().setHours(0, 0, 0, 0)) / 864e5);
-  setDay(days === 0 ? 'today' : days === 1 ? 'tomorrow' : 'other');
-  if (days > 1) $('#f-date').value = dateKey(when);
-  $('#f-time').value = hhmm(when);
+  prefs.km = a.km;
+  setDay(a.when.day);
+  $('#f-time').value = a.when.time;
   savePrefs();
   renderRelief();
   renderDistance();
@@ -1299,11 +1296,12 @@ function init() {
   renderDistance();
   initQuick({
     saved: prefs.quick,
-    estimateKm,
+    duration: quickDuration,
+    currentKm: () => prefs.km,
     startName: () => prefs.start?.name || 'Départ choisi sur la carte',
     apply: applyQuick,
     save: a => {
-      prefs.quick = { zone: a.zone, relief: a.relief, hours: a.hours };
+      prefs.quick = { zone: a.zone, relief: a.relief, km: a.km };
       savePrefs();
     },
     details: () => {
