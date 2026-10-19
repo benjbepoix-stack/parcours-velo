@@ -1,8 +1,8 @@
 /*
- * Questions rapides de l'onglet Étape : quatre questions, une par écran (séance, terrain,
- * distance, départ), puis un récapitulatif et « Trouver mes boucles ». Séance et terrain
- * se choisissent d'une touche ; distance (curseur) et départ (jour + heure exacte) se
- * valident avec « Suivant ». Les réponses règlent le formulaire détaillé, toujours accessible.
+ * Questions rapides de l'onglet Étape : cinq questions, une par écran (séance, terrain,
+ * distance, jour, heure), puis un récapitulatif et « Trouver mes boucles ». Séance, terrain
+ * et jour se choisissent d'une touche (« Autre jour » ouvre un calendrier) ; distance
+ * (curseur) et heure exacte se valident avec « Suivant ». Les réponses règlent le formulaire détaillé, toujours accessible.
  */
 import { icon } from './icons.js';
 
@@ -10,6 +10,14 @@ const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const pad = n => String(n).padStart(2, '0');
 const DAYS = { today: 'Aujourd’hui', tomorrow: 'Demain' };
+const dateKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const inDays = n => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return dateKey(d);
+};
+const validDate = v => /^\d{4}-\d{2}-\d{2}$/.test(v || '') && v >= inDays(0) && v <= inDays(15);
+const dayText = day => DAYS[day] || new Date(`${day}T12:00:00`).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
 
 /** Prochain quart d'heure, au moins dix minutes plus tard (le temps de s'habiller). */
 function soonTime() {
@@ -43,7 +51,8 @@ const QUESTIONS = [
     ]
   },
   { key: 'km', title: 'Quelle distance ?', short: 'Distance' },
-  { key: 'when', title: 'Départ quand ?', short: 'Départ' }
+  { key: 'day', title: 'Quel jour ?', short: 'Jour' },
+  { key: 'time', title: 'À quelle heure ?', short: 'Heure' }
 ];
 const RECAP = QUESTIONS.length;
 
@@ -64,7 +73,8 @@ function valueText(q) {
   const a = answers[q.key];
   if (q.choices) return q.choices.find(c => c.value === a)?.label || '';
   if (q.key === 'km') return `${a} km · ${durationText(a)}`;
-  return `${DAYS[a.day]} · ${a.time}`;
+  if (q.key === 'day') return dayText(a);
+  return a;
 }
 
 function renderInput(q) {
@@ -77,11 +87,23 @@ function renderInput(q) {
       </div>
       <button type="button" class="btn btn--primary btn--lg" data-quick-next>Suivant</button>`;
   }
-  return `<div class="quick__field">
-      <div class="segmented segmented--two" role="radiogroup" aria-label="Jour">
-        ${Object.entries(DAYS).map(([k, l]) => `<button type="button" role="radio" data-quick-day="${k}" aria-checked="${draft.day === k}">${l}</button>`).join('')}
+  if (q.key === 'day') {
+    const other = draft.day === 'other';
+    return `<div class="quick__choices" role="radiogroup" aria-labelledby="quickTitle">
+        ${Object.entries(DAYS)
+          .map(([k, l]) => `<button type="button" class="quick__choice" role="radio" aria-checked="${answers.day === k && !other}" data-quick-day="${k}"><strong>${l}</strong></button>`)
+          .join('')}
+        <button type="button" class="quick__choice" role="radio" aria-checked="${other}" data-quick-day="other"><strong>Autre jour</strong><small>Jusqu’à 15 jours (prévisions de vent)</small></button>
       </div>
-      <input class="input quick__time" id="quickTime" type="time" step="300" value="${esc(draft.time)}" aria-label="Heure de départ">
+      ${
+        other
+          ? `<div class="quick__field"><input class="input quick__time" id="quickDate" type="date" min="${inDays(2)}" max="${inDays(15)}" value="${esc(draft.date)}" aria-label="Jour de départ"></div>
+      <button type="button" class="btn btn--primary btn--lg" data-quick-next>Suivant</button>`
+          : ''
+      }`;
+  }
+  return `<div class="quick__field">
+      <input class="input quick__time" id="quickTime" type="time" step="300" value="${esc(draft.time)}" aria-labelledby="quickTitle">
     </div>
     <button type="button" class="btn btn--primary btn--lg" data-quick-next>Suivant</button>`;
 }
@@ -131,10 +153,9 @@ export function renderQuick() {
   if (step < RECAP) {
     const key = QUESTIONS[step].key;
     if (key === 'km') draft.km = draft.km ?? answers.km ?? ctx.currentKm();
-    if (key === 'when') {
-      draft.day = draft.day ?? answers.when?.day ?? 'today';
-      draft.time = draft.time ?? answers.when?.time ?? soonTime();
-    }
+    if (key === 'day' && draft.day === undefined && answers.day && !DAYS[answers.day]) draft.day = 'other';
+    if (key === 'day' && draft.day === 'other') draft.date = draft.date ?? (validDate(answers.day) && !DAYS[answers.day] ? answers.day : inDays(2));
+    if (key === 'time') draft.time = draft.time ?? answers.time ?? soonTime();
   }
   $('#quick').innerHTML = step >= RECAP ? renderRecap() : renderQuestion(step);
   $('#rideForm').classList.toggle('is-asking', step < RECAP);
@@ -173,10 +194,11 @@ export function initQuick(c) {
     zone: ['z1', 'z2', 'z3', 'z4'].includes(saved.zone) ? saved.zone : undefined,
     relief: ['flat', 'hilly', 'any'].includes(saved.relief) ? saved.relief : undefined,
     km: km >= 20 && km <= 200 ? Math.round(km / 5) * 5 : undefined,
-    when: undefined
+    day: undefined,
+    time: undefined
   };
-  // L'heure de départ n'a de sens que le jour même : elle repart sur aujourd'hui, au prochain quart d'heure.
-  if (answers.zone && answers.relief && answers.km) answers.when = { day: 'today', time: soonTime() };
+  // Le départ n'a de sens que le jour même : il repart sur aujourd'hui, au prochain quart d'heure.
+  if (answers.zone && answers.relief && answers.km) Object.assign(answers, { day: 'today', time: soonTime() });
   step = complete() ? RECAP : 0;
   const host = $('#quick');
   host.addEventListener('input', e => {
@@ -187,6 +209,7 @@ export function initQuick(c) {
       $('#quickKmSub').textContent = durationText(draft.km);
     }
     if (e.target.id === 'quickTime') draft.time = e.target.value;
+    if (e.target.id === 'quickDate') draft.date = e.target.value;
   });
   host.addEventListener('click', e => {
     const t = e.target;
@@ -194,18 +217,22 @@ export function initQuick(c) {
     if (choice) return answer(QUESTIONS[step].key, choice.dataset.quickValue);
     const day = t.closest('[data-quick-day]');
     if (day) {
-      draft.day = day.dataset.quickDay;
-      host.querySelectorAll('[data-quick-day]').forEach(b => b.setAttribute('aria-checked', String(b === day)));
-      return;
+      if (day.dataset.quickDay !== 'other') return answer('day', day.dataset.quickDay);
+      draft.day = 'other';
+      renderQuick();
+      return $('#quickDate')?.focus();
     }
     if (t.closest('[data-quick-next]')) {
       const key = QUESTIONS[step].key;
       if (key === 'km') return answer('km', draft.km);
-      if (!validTime(draft.time)) {
-        $('#quickTime').setAttribute('aria-invalid', 'true');
-        return $('#quickTime').focus();
+      if (key === 'day') {
+        if (validDate(draft.date)) return answer('day', draft.date);
+        $('#quickDate').setAttribute('aria-invalid', 'true');
+        return $('#quickDate').focus();
       }
-      return answer('when', { day: draft.day, time: draft.time });
+      if (validTime(draft.time)) return answer('time', draft.time);
+      $('#quickTime').setAttribute('aria-invalid', 'true');
+      return $('#quickTime').focus();
     }
     const go = t.closest('[data-quick-go]');
     if (go) {

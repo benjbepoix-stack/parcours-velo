@@ -389,8 +389,10 @@ function applyQuick(a) {
   prefs.zone = a.zone;
   prefs.relief = a.relief;
   prefs.km = a.km;
-  setDay(a.when.day);
-  $('#f-time').value = a.when.time;
+  const other = a.day !== 'today' && a.day !== 'tomorrow';
+  setDay(other ? 'other' : a.day);
+  if (other) $('#f-date').value = a.day;
+  $('#f-time').value = a.time;
   savePrefs();
   renderRelief();
   renderDistance();
