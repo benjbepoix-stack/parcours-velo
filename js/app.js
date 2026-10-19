@@ -1,5 +1,5 @@
 /* Parcours vélo — application : formulaire, planification, résultats, favoris, profil. */
-import { RELIEF, ZONES, zoneRange, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
+import { RELIEF, ZONES, zoneRange, estimateDuration, QUIET_LEVELS, compass, compassLong, haversine, bearing, cumulative, ascentOf, parseGPX, toGPX, simulate, overlapRatio, windShares, scoreRoute, compareStarts, simplify, windAt } from './core/ride.js';
 import { planRoute } from './core/planner.js';
 import { planMultiDay, clampDays, stageGPX, MIN_DAYS, MAX_DAYS } from './core/trip.js';
 import { dateKey, addDays, combine, hhmm, hLabel, dayLabel } from './core/dates.js';
@@ -13,6 +13,7 @@ import { elevationChart, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
 import { initCols, setColsActive } from './ui/cols.js';
 import { initRaces, renderRaces } from './ui/races.js';
+import { initQuick, renderQuick, quickAnswers } from './ui/quick.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -51,6 +52,7 @@ if (!isPoint(prefs.end)) prefs.end = null;
 prefs.days = clampDays(prefs.days);
 prefs.vias = Array.isArray(prefs.vias) ? prefs.vias.filter(isPoint).map(v => ({ ...v, id: v.id || uid() })) : [];
 prefs.km = Math.min(200, Math.max(20, Number(prefs.km) || 80));
+if (prefs.view !== 'full') prefs.view = 'quick';
 const savePrefs = () => store.savePrefs(prefs);
 
 let profile = store.loadProfile();
@@ -219,6 +221,7 @@ function renderStops() {
   if (prefs.mode === 'loop') rows.push(`<li class="stop stop--return"><span class="stop__badge" aria-hidden="true">${icon('loop', 14)}</span><div class="stop__body"><span class="stop__static">Retour au départ</span></div></li>`);
   $('#stops').innerHTML = rows.join('');
   $('#addVia').querySelector('span:last-child').textContent = prefs.vias.length ? 'Ajouter un autre passage' : 'Ajouter un point de passage';
+  if (prefs.view === 'quick') renderQuick(); // le récapitulatif affiche le point de départ
 }
 
 function syncMap() {
@@ -371,6 +374,46 @@ function onStopsClick(e) {
   if (action === 'remove') removeVia(id);
   if (action === 'locate') locate();
   if (action === 'pick') (picking === id ? stopPicking() : startPicking(id));
+}
+
+/* ---------- Questions rapides ↔ réglages détaillés ---------- */
+/** Durée estimée d'une boucle de `km` dans la zone et sur le terrain choisis. */
+function quickDuration({ zone, relief, km }) {
+  const d = estimateDuration(km, km * (RELIEF[relief]?.climb ?? 9), profile.ftp * ZONES[zone || 'z2'].ftp, profile.weight + profile.bike, profile.cda);
+  return d ? fmtDur(d) : '';
+}
+
+/** Les réponses aux questions rapides règlent le formulaire (boucle, séance, terrain, distance, départ). */
+function applyQuick(a) {
+  if (prefs.mode !== 'loop') setMode('loop');
+  prefs.zone = a.zone;
+  prefs.relief = a.relief;
+  prefs.km = a.km;
+  setDay(a.when.day);
+  $('#f-time').value = a.when.time;
+  savePrefs();
+  renderRelief();
+  renderDistance();
+  invalidateResult();
+  refreshTime();
+}
+
+function renderView() {
+  const quick = prefs.view === 'quick';
+  $('#rideForm').classList.toggle('is-quick', quick);
+  $('#quick').hidden = !quick;
+  const sw = $('#viewSwitch');
+  sw.innerHTML = quick ? `${icon('edit', 15)}<span>Tous les réglages</span>` : `${icon('chevron', 15)}<span>Questions rapides</span>`;
+  if (quick) renderQuick();
+  else $('#rideForm').classList.remove('is-asking');
+}
+
+function setView(view) {
+  prefs.view = view;
+  savePrefs();
+  // De retour aux questions : elles redeviennent la référence (le détail retouché est remplacé).
+  if (view === 'quick' && quickAnswers()) applyQuick(quickAnswers());
+  renderView();
 }
 
 /* ---------- Mode, séance, distance, jour, routes ---------- */
@@ -1251,6 +1294,25 @@ function init() {
   renderRelief();
   renderQuiet();
   renderDistance();
+  initQuick({
+    saved: prefs.quick,
+    duration: quickDuration,
+    currentKm: () => prefs.km,
+    startName: () => prefs.start?.name || 'Départ choisi sur la carte',
+    apply: applyQuick,
+    save: a => {
+      prefs.quick = { zone: a.zone, relief: a.relief, km: a.km };
+      savePrefs();
+    },
+    details: () => {
+      setView('full');
+      $('[data-stop="start"] .stop__input')?.focus();
+    },
+    locate
+  });
+  if (prefs.view === 'quick' && quickAnswers()) applyQuick(quickAnswers());
+  renderView();
+  $('#viewSwitch').addEventListener('click', () => setView(prefs.view === 'quick' ? 'full' : 'quick'));
   fillProfile();
   renderWeightCategory();
   applyCarnetSyncUI();

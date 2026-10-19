@@ -126,6 +126,36 @@ export async function addRaceToCadence(race) {
   return outcome;
 }
 
+/** Champs que l'on remplit soi-même dans Cadence : une course qui en a ne doit pas disparaître. */
+const USER_FIELDS = ['time', 'distance', 'elevation', 'price', 'target', 'notes', 'resultTime', 'resultRank', 'resultDistance'];
+
+/**
+ * Retire une course du planning de Cadence (même nom, une des dates données).
+ * Une course complétée dans Cadence (objectif, notes, résultat…) est laissée en place.
+ * @param {{name:string, dates:string[]}} race
+ * @returns {Promise<'removed'|'kept'|'missing'>}
+ */
+export async function removeRaceFromCadence(race) {
+  const { dbMod, auth, db } = await load();
+  const user = auth.currentUser;
+  if (!user) throw Object.assign(new Error('Connectez-vous à votre compte Cadence (Profil).'), { code: 'no-account' });
+  const dates = new Set(race.dates.filter(Boolean));
+  const match = r => dates.has(r.date) && same(r, { name: race.name, date: r.date });
+  let outcome = 'missing';
+  await dbMod.runTransaction(dbMod.ref(db, `users/${user.uid}/carnet/races`), current => {
+    const list = toList(current);
+    const found = list.filter(match);
+    if (!found.length) {
+      outcome = 'missing';
+      return list;
+    }
+    const removable = found.filter(r => !USER_FIELDS.some(k => String(r[k] ?? '').trim()));
+    outcome = removable.length ? 'removed' : 'kept';
+    return list.filter(r => !removable.includes(r));
+  });
+  return outcome;
+}
+
 /** Dernier relevé valide d'une série de mesures de Cadence ({date, value}). */
 function lastValue(list) {
   const rows = toList(list)
