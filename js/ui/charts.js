@@ -38,7 +38,7 @@ export function elevationChart(r, width) {
         .map(s => `<rect x="${x(s.d0).toFixed(1)}" y="${H - B + 3}" width="${Math.max(0.8, x(Math.min(d, s.d1 + (s.d1 - s.d0))) - x(s.d0)).toFixed(1)}" height="4" fill="var(--${windClass(s.head)})"/>`)
         .join('')
     : '';
-  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Profil altimétrique, de ${lo} à ${hi} mètres sur ${km.toFixed(0)} kilomètres">
+  return `<svg class="chart elev" viewBox="0 0 ${W} ${H}" role="slider" tabindex="0" aria-label="Profil altimétrique, de ${lo} à ${hi} mètres sur ${km.toFixed(0)} kilomètres. Glissez pour situer un point sur la carte." aria-valuemin="0" aria-valuemax="${km.toFixed(1)}" aria-valuenow="0" data-frame="${[W, H, L, R, T, B, lo, hi].join(',')}">
     <defs><linearGradient id="elevFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--accent)" stop-opacity=".32"/><stop offset="1" stop-color="var(--accent)" stop-opacity="0"/></linearGradient></defs>
     <line x1="${L}" x2="${W - R}" y1="${y(hi)}" y2="${y(hi)}" stroke="var(--line)"/>
     <line x1="${L}" x2="${W - R}" y1="${y(lo)}" y2="${y(lo)}" stroke="var(--line)"/>
@@ -46,7 +46,109 @@ export function elevationChart(r, width) {
     <text class="axis" x="${L - 6}" y="${y(lo) + 4}" text-anchor="end">${lo} m</text>
     <path d="${area}" fill="url(#elevFill)"/><path d="${line}" fill="none" stroke="var(--accent-text)" stroke-width="1.8" stroke-linejoin="round"/>
     ${band}${ticks}
-  </svg>`;
+    <g class="elev__cursor" hidden><line y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-width="1.5"/><circle r="5" fill="var(--accent)" stroke="var(--ink)" stroke-width="2"/></g>
+  </svg>
+  <p class="elev-readout" aria-live="polite">Glissez sur le profil pour situer un point sur la carte.</p>`;
+}
+
+/**
+ * Curseur du profil : glisser (doigt, souris ou flèches du clavier) déplace un repère sur le profil,
+ * affiche km, altitude, pente et dénivelé déjà fait, et appelle onMove avec le point du tracé.
+ * @param {Element} host  bloc qui contient le SVG rendu par elevationChart
+ * @param {{coords:number[][]}} r
+ * @param {{onMove:(c:number[])=>void, onStart?:()=>void, onEnd?:()=>void}} cb
+ */
+export function attachElevationScrub(host, r, { onMove, onStart = () => {}, onEnd = () => {} }) {
+  const svg = host?.querySelector('svg.elev');
+  if (!svg) return;
+  const [W, H, L, R, T, B, lo, hi] = svg.dataset.frame.split(',').map(Number);
+  const cursor = svg.querySelector('.elev__cursor');
+  const readout = host.querySelector('.elev-readout');
+  const coords = r.coords;
+  const cum = [0];
+  const up = [0];
+  for (let i = 1; i < coords.length; i++) {
+    cum.push(cum[i - 1] + haversine(coords[i - 1], coords[i]));
+    const de = coords[i][2] - coords[i - 1][2];
+    up.push(up[i - 1] + (Number.isFinite(de) && de > 0 ? de : 0));
+  }
+  const total = cum[cum.length - 1];
+  const indexAt = d => {
+    let a = 0;
+    let b = cum.length - 1;
+    while (b - a > 1) {
+      const m = (a + b) >> 1;
+      if (cum[m] < d) a = m;
+      else b = m;
+    }
+    return d - cum[a] < cum[b] - d ? a : b;
+  };
+  const altAt = i => {
+    for (let k = 0; i - k >= 0 || i + k < coords.length; k++) {
+      if (Number.isFinite(coords[i - k]?.[2])) return coords[i - k][2];
+      if (Number.isFinite(coords[i + k]?.[2])) return coords[i + k][2];
+    }
+    return lo;
+  };
+  const fr = (n, d = 1) => n.toFixed(d).replace('.', ',');
+  let current = 0;
+  const show = d => {
+    current = Math.max(0, Math.min(total, d));
+    const i = indexAt(current);
+    const alt = altAt(i);
+    const x = L + (cum[i] / total) * (W - L - R);
+    const y = T + ((hi - alt) / (hi - lo)) * (H - T - B);
+    cursor.removeAttribute('hidden');
+    cursor.querySelector('line').setAttribute('x1', x);
+    cursor.querySelector('line').setAttribute('x2', x);
+    cursor.querySelector('circle').setAttribute('cx', x);
+    cursor.querySelector('circle').setAttribute('cy', y);
+    // Pente sur environ 200 m autour du point.
+    const a = indexAt(Math.max(0, cum[i] - 100));
+    const b = indexAt(Math.min(total, cum[i] + 100));
+    const grade = cum[b] > cum[a] ? ((altAt(b) - altAt(a)) / (cum[b] - cum[a])) * 100 : 0;
+    const text = `km ${fr(cum[i] / 1000)} · ${Math.round(alt)} m · pente ${grade > 0 ? '+' : ''}${fr(grade)} % · D+ fait ${Math.round(up[i])} m`;
+    readout.innerHTML = `<strong>km ${fr(cum[i] / 1000)}</strong><span>${Math.round(alt)} m</span><span class="${grade > 6 ? 'is-steep' : grade < -3 ? 'is-down' : ''}">pente ${grade > 0 ? '+' : ''}${fr(grade)} %</span><span>D+ fait ${Math.round(up[i])} m</span>`;
+    svg.setAttribute('aria-valuenow', (cum[i] / 1000).toFixed(1));
+    svg.setAttribute('aria-valuetext', text);
+    onMove(coords[i]);
+  };
+  const fromEvent = e => {
+    const box = svg.getBoundingClientRect();
+    const vx = ((e.clientX - box.left) / box.width) * W;
+    show(((vx - L) / (W - L - R)) * total);
+  };
+  // onStart n'est appelé qu'au premier glissement : un simple défilement vertical de la page
+  // (qui annule le pointeur) ne déclenche rien.
+  let dragging = false;
+  let started = false;
+  svg.addEventListener('pointerdown', e => {
+    dragging = true;
+    started = false;
+    svg.setPointerCapture(e.pointerId);
+    fromEvent(e);
+  });
+  svg.addEventListener('pointermove', e => {
+    if (dragging && !started) {
+      started = true;
+      onStart();
+    }
+    if (dragging || e.pointerType === 'mouse') fromEvent(e);
+  });
+  const stop = () => {
+    if (!dragging) return;
+    dragging = false;
+    if (started) onEnd();
+  };
+  svg.addEventListener('pointerup', stop);
+  svg.addEventListener('pointercancel', stop);
+  svg.addEventListener('keydown', e => {
+    const step = total / (e.shiftKey ? 20 : 100);
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      show(current + (e.key === 'ArrowRight' ? step : -step));
+    }
+  });
 }
 
 /**

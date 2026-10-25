@@ -13,7 +13,7 @@ Application web (installable sur iPhone et Android) qui propose des **boucles et
 - **Allure** : zones **Z1 Récupération** (45–55 % de la FTP), **Z2 Endurance** (56–75 %), **Z3 Tempo** (76–90 %), **Z4 Seuil** (91–105 %). Chaque bouton affiche la **plage de puissance en watts** de la zone (d'après la FTP du profil) — la vitesse dépendant du parcours —, et la note donne la fourchette de durée estimée de la sortie réglée (ex. Z2, FTP 230 W, 80 km et 720 m D+ : 2 h 50 à 3 h 14). Estimation = temps à plat à la puissance de la zone + un quart du temps de montée du dénivelé (le reste est compensé en descente). La zone choisie sert ensuite à la simulation mètre par mètre (vent, pente), à 50, 68, 83 ou 95 % de la FTP ; en côte la puissance est augmentée progressivement (jusqu'à +20 % à 8 %), comme le font naturellement les cyclistes. Modèle recalé en octobre 2026 (+5 km/h environ par rapport à la première version, jugée trop lente).
 - **Départ** : Aujourd'hui / Demain / Autre jour en trois boutons égaux, puis l'heure.
 - **Carte** : sur téléphone, elle s'affiche dans la page juste sous le bouton « Trouver mes boucles » (et en haut de l'onglet Cols) ; sur ordinateur, à droite du panneau. Le bouton de calcul reste visible au-dessus de la barre d'onglets.
-- **Barre d'onglets** en bas de l'écran (Sortie, Cols, Favoris, Courses), comme une app mobile ; sur ordinateur, elle reste collée au bas du panneau.
+- **Barre d'onglets** en bas de l'écran (Étape, Cols, Favoris, Courses, Atelier), comme une app mobile ; sur ordinateur, elle reste collée au bas du panneau.
 - **Vent** : prévisions heure par heure (Open-Meteo) au point de départ. Huit boucles sont calculées dans toutes les directions, la première face au vent, puis simulées mètre par mètre avec ta puissance, ton poids, ta position, la pente et le vent prévu à l'heure du passage. Le classement privilégie **l'aller face au vent et le retour vent dans le dos**.
 - **Meilleur créneau** : pour la boucle choisie, la durée estimée selon l'heure de départ (6 h – 20 h), avec le risque de pluie. Un appui sur une barre change l'heure et recalcule tout, sans refaire les itinéraires.
 - **Routes tranquilles et roulables** : itinéraires [BRouter](https://brouter.de) sur OpenStreetMap avec un **profil vélo de route** dédié (`js/services/road-profile.js`, dérivé de *fastbike-verylowtraffic*) : pistes, sentiers et revêtements non asphaltés quasi interdits, trafic évité selon le niveau *Standard*, *Peu de trafic* ou *Très peu de trafic*. Le profil est envoyé au serveur BRouter ; s'il est indisponible, l'app se rabat sur les profils intégrés et le signale.
@@ -53,6 +53,13 @@ L'onglet **Courses** rassemble **123 cyclosportives et granfondos** (`js/data/ra
 L'envoi passe par le **compte Cadence** (même compte e-mail / mot de passe que Carnet, Mon Garage, Ma Maison et Mon budget), à connecter une fois dans **Profil › Compte Cadence** ; dans le navigateur, une session déjà ouverte dans Cadence est reprise. Seule la liste `races` du compte est modifiée, par une transaction : les autres données de Cadence et de Carnet ne sont jamais réécrites et une course déjà présente (même nom, même date) n'est pas dupliquée. Si le compte n'a pas encore été préparé par Cadence (première ouverture), rien n'est écrit et un message invite à ouvrir Cadence une fois. La distance chiffrée est à préciser dans Cadence. Détail dans `js/services/cadence-sync.js`.
 
 **✓ Mes courses** affiche les courses étoilées et celles déjà envoyées à Cadence.
+
+## Atelier
+L'onglet **Atelier** regroupe deux calculateurs, sans aucun service externe (`js/core/tools.js`, `js/ui/atelier.js`) :
+- **Transmission** : plateaux, cassette, pneu et cadence donnent la vitesse de chaque combinaison, le développement et le ratio ; les croisements de chaîne sont signalés.
+- **Pression des pneus** : à partir du poids du Profil, de la largeur du pneu, du terrain et du montage (tubeless, jante hookless plafonnée à 5 bar). La formule est ouverte (règle de Frank Berto, écrasement du pneu de 15 %) : ce n'est pas le modèle de Silca, qui est propriétaire. Un lien « Affiner sur Silca » ouvre leur calculateur.
+
+Sur le **profil** d'une boucle, glisser le doigt (ou la souris, ou les flèches du clavier) place un repère jaune sur la carte et affiche le kilomètre, l'altitude, la pente et le dénivelé déjà fait. Sur téléphone, la carte flotte en haut de l'écran pendant le glissement.
 
 ## Liaison FTP / poids avec Cadence
 
