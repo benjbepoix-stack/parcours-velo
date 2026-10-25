@@ -9,11 +9,12 @@ import { suggest, reverse } from './services/geocode.js';
 import * as store from './services/store.js';
 import { cadenceAccount, signInCadence, signOutCadence, fetchCadenceMetrics } from './services/cadence-sync.js';
 import { icon, windArrow } from './ui/icons.js';
-import { elevationChart, startsChart } from './ui/charts.js';
+import { elevationChart, attachElevationScrub, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
 import { initCols, setColsActive } from './ui/cols.js';
 import { initRaces, renderRaces } from './ui/races.js';
 import { initQuick, renderQuick, quickAnswers } from './ui/quick.js';
+import { initAtelier, renderAtelier } from './ui/atelier.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -111,8 +112,8 @@ function showTab(name) {
     const active = b.dataset.tab === name;
     b.setAttribute(b.getAttribute('role') === 'tab' ? 'aria-selected' : 'aria-pressed', String(active));
   });
-  const previous = ['ride', 'cols', 'saved', 'races', 'profile'].find(t => !$(`#pane-${t}`).hidden);
-  ['ride', 'cols', 'saved', 'races', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
+  const previous = ['ride', 'cols', 'saved', 'races', 'atelier', 'profile'].find(t => !$(`#pane-${t}`).hidden);
+  ['ride', 'cols', 'saved', 'races', 'atelier', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
   activeTab = name;
   placeMap();
   // Téléphone : en changeant d'onglet depuis le bas de la page, on revient au début du panneau.
@@ -122,6 +123,7 @@ function showTab(name) {
   }
   if (name === 'saved') renderSaved();
   if (name === 'races') renderRaces();
+  if (name === 'atelier') renderAtelier();
   if (name === 'profile') {
     syncFromCarnet({ silent: true });
     refreshCadenceAccount();
@@ -904,7 +906,7 @@ function renderDetail() {
         : ''
     }
 
-    <section class="block">
+    <section class="block" id="elevBlock">
       <h4 class="block__title">Profil</h4>
       ${elevationChart(r, width)}
     </section>
@@ -930,6 +932,33 @@ function renderDetail() {
       ${r.waypoints ? `<a class="btn btn--soft" href="${esc(brouterWebLink(r.waypoints, r.quiet || prefs.quiet))}" target="_blank" rel="noopener">${icon('edit')}<span>Retoucher</span></a>` : ''}
       <p class="export-hint">Komoot, Garmin, Wahoo : exportez le GPX puis choisissez l’app dans la feuille de partage (ou importez-le sur komoot.com).</p>
     </div>`;
+  attachElevationScrub($('#elevBlock'), r, { onMove: mapUi.showCursor, onStart: floatMap, onEnd: dockMapSoon });
+}
+
+/*
+ * Téléphone : pendant qu'on glisse sur le profil, la carte (restée plus haut dans la page)
+ * flotte en haut de l'écran pour qu'on voie le repère bouger. Elle reprend sa place ensuite.
+ */
+let dockTimer = 0;
+function floatMap() {
+  clearTimeout(dockTimer);
+  const wrap = $('.map-wrap');
+  if (!mobileMQ.matches || !wrap || wrap.classList.contains('is-floating')) return;
+  const box = wrap.getBoundingClientRect();
+  if (box.top >= 0 && box.bottom <= innerHeight) return;
+  wrap.parentElement.style.minHeight = `${wrap.offsetHeight}px`;
+  wrap.classList.add('is-floating');
+  mapUi.refreshSize();
+}
+function dockMapSoon() {
+  clearTimeout(dockTimer);
+  dockTimer = setTimeout(() => {
+    const wrap = $('.map-wrap');
+    if (!wrap?.classList.contains('is-floating')) return;
+    wrap.classList.remove('is-floating');
+    document.querySelectorAll('.map-slot').forEach(slot => (slot.style.minHeight = ''));
+    mapUi.refreshSize();
+  }, 1500);
 }
 
 function stravaLink(r) {
@@ -1554,6 +1583,7 @@ function init() {
   });
 
   initRaces({ toast, getStart: () => (isPoint(prefs.start) ? prefs.start : null) });
+  initAtelier({ getProfile: () => profile });
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
 }

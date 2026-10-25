@@ -152,6 +152,7 @@ export function drawRoute(r, { fit = true } = {}) {
   if (!map) return;
   layer.clearLayers();
   lastDraw = r ? { route: r } : null;
+  hideCursor();
   if (!r) return;
   const colors = { head: cssVar('--head'), cross: cssVar('--cross'), tail: cssVar('--tail'), casing: cssVar('--casing'), accent: cssVar('--accent') };
   const latlngs = r.coords.map(c => [c[0], c[1]]);
@@ -203,6 +204,31 @@ export function drawRoute(r, { fit = true } = {}) {
 export function clearRoutes() {
   lastDraw = null;
   layer?.clearLayers();
+  hideCursor();
+}
+
+/* ---------- Curseur du profil ---------- */
+let cursor = null;
+
+/** Repère jaune posé sur le tracé ; la carte suit s'il sort de la vue. */
+export function showCursor(c) {
+  if (!map || !c) return;
+  const latlng = [c[0], c[1]];
+  if (!cursor) {
+    cursor = L.marker(latlng, { interactive: false, keyboard: false, zIndexOffset: 1000, icon: L.divIcon({ className: 'route-cursor', html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11] }) });
+  }
+  cursor.setLatLng(latlng);
+  if (!map.hasLayer(cursor)) cursor.addTo(map);
+  if (!map.getBounds().pad(-0.12).contains(latlng)) map.panTo(latlng, { animate: true, duration: 0.25 });
+}
+
+export function hideCursor() {
+  if (cursor && map?.hasLayer(cursor)) cursor.remove();
+}
+
+/** À appeler quand le conteneur de la carte change de taille. */
+export function refreshSize() {
+  map?.invalidateSize({ pan: false });
 }
 
 /* ---------- Cols ---------- */

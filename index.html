@@ -182,6 +182,64 @@
         <div id="racesList"></div>
       </section>
 
+      <!-- ============ ATELIER ============ -->
+      <section class="pane" id="pane-atelier" role="tabpanel" aria-labelledby="tab-atelier" hidden>
+        <div class="segmented segmented--two" id="atelierTabs" role="radiogroup" aria-label="Outil">
+          <button type="button" role="radio" data-tool="gears" aria-checked="true">Transmission</button>
+          <button type="button" role="radio" data-tool="tires" aria-checked="false">Pression des pneus</button>
+        </div>
+
+        <div class="tool" id="toolGears">
+          <div class="tool-card">
+            <div class="grid2">
+              <div class="field"><label class="label" for="g-rings">Plateaux</label><select class="input" id="g-rings"></select></div>
+              <div class="field"><label class="label" for="g-cassette">Cassette</label><select class="input" id="g-cassette"></select></div>
+            </div>
+            <div class="field"><label class="label" for="g-wheel">Pneu</label><select class="input" id="g-wheel"></select></div>
+            <div class="range-field range-field--bare">
+              <div class="range-field__head"><label class="label" for="g-cadence">Cadence</label><output class="range-field__value range-field__value--sm" id="g-cadenceOut" for="g-cadence"></output></div>
+              <input type="range" id="g-cadence" min="50" max="130" step="5">
+            </div>
+          </div>
+          <div class="tool-big">
+            <div class="tool-big__main"><strong id="g-speed"></strong><span id="g-speedLabel"></span></div>
+            <div><strong id="g-dev"></strong><span id="g-devLabel"></span></div>
+          </div>
+          <h2 class="step__title">Vitesse à cette cadence · km/h</h2>
+          <div class="tool-card tool-card--table">
+            <table class="gears" id="g-table"></table>
+            <p class="hint">Touchez une case pour le détail. Les cases pâles sont des croisements de chaîne à éviter.</p>
+          </div>
+          <p class="hint" id="g-range"></p>
+        </div>
+
+        <div class="tool" id="toolTires" hidden>
+          <div class="tool-card">
+            <p class="tool-mass" id="t-mass"></p>
+            <div class="range-field range-field--bare">
+              <div class="range-field__head"><label class="label" for="t-width">Largeur mesurée du pneu</label><output class="range-field__value range-field__value--sm" id="t-widthOut" for="t-width"></output></div>
+              <input type="range" id="t-width" min="23" max="50" step="1">
+            </div>
+            <div class="field"><span class="label" id="t-surfaceLabel">Terrain</span><div class="chips" id="t-surface" role="radiogroup" aria-labelledby="t-surfaceLabel"></div></div>
+            <div class="field"><span class="label" id="t-mountLabel">Montage</span>
+              <div class="segmented segmented--two" id="t-mount" role="radiogroup" aria-labelledby="t-mountLabel">
+                <button type="button" role="radio" data-tubeless="0">Chambre à air</button>
+                <button type="button" role="radio" data-tubeless="1">Tubeless</button>
+              </div>
+            </div>
+            <button type="button" class="chip tool-check" role="checkbox" id="t-hookless" aria-checked="false">Jante hookless (5 bar max)</button>
+          </div>
+          <div class="tool-big">
+            <div class="tool-big__main"><strong id="t-front"></strong><span>Avant</span></div>
+            <div class="tool-big__main"><strong id="t-rear"></strong><span>Arrière</span></div>
+          </div>
+          <p class="hint" id="t-psi"></p>
+          <p class="warn" id="t-warn" hidden></p>
+          <a class="link-out" href="https://silca.cc/pages/sppc-form" target="_blank" rel="noopener"><span><strong>Affiner sur Silca</strong><small>Le calculateur pro de Silca, sur leur site</small></span><span data-icon="external"></span></a>
+          <p class="hint">Estimation de départ selon la règle de Berto, à ajuster au ressenti. Ne dépassez jamais la pression maximale indiquée sur le pneu et la jante.</p>
+        </div>
+      </section>
+
       <!-- ============ PROFIL ============ -->
       <section class="pane" id="pane-profile" role="tabpanel" aria-labelledby="tab-profile" hidden>
         <form class="form" id="profileForm" novalidate>
@@ -240,6 +298,7 @@
         <button type="button" role="tab" class="tabbar__item" id="tab-cols" aria-controls="pane-cols" aria-selected="false" data-tab="cols"><span class="tabbar__icon" data-icon="peak"></span><span class="tabbar__label">Cols</span></button>
         <button type="button" role="tab" class="tabbar__item" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved"><span class="tabbar__icon" data-icon="star"></span><span class="tabbar__label">Favoris</span><span class="count tabbar__count" id="savedCount"></span></button>
         <button type="button" role="tab" class="tabbar__item" id="tab-races" aria-controls="pane-races" aria-selected="false" data-tab="races"><span class="tabbar__icon" data-icon="flag"></span><span class="tabbar__label">Courses</span></button>
+        <button type="button" role="tab" class="tabbar__item" id="tab-atelier" aria-controls="pane-atelier" aria-selected="false" data-tab="atelier"><span class="tabbar__icon" data-icon="tool"></span><span class="tabbar__label">Atelier</span></button>
       </nav>
 
       <footer class="credits">Échappée · itinéraires BRouter · cartes © OpenStreetMap, Esri, CyclOSM · météo Open-Meteo · lieux Photon</footer>
