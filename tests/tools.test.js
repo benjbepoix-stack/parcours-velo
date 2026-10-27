@@ -21,12 +21,20 @@ test('gearTable marque les croisements de chaîne en double plateau', () => {
 test('tirePressure : plus large, plus lourd, gravel et tubeless vont dans le bon sens', () => {
   const road = tirePressure({ mass: 81, width: 28 });
   assert.ok(road.rear > road.front);
-  assert.ok(road.rear > 3.8 && road.rear < 5);
+  assert.ok(road.rear > 5 && road.rear < 6);
   assert.ok(tirePressure({ mass: 81, width: 32 }).rear < road.rear);
   assert.ok(tirePressure({ mass: 95, width: 28 }).rear > road.rear);
   assert.ok(tirePressure({ mass: 81, width: 28, surface: 'gravel' }).rear < road.rear);
   assert.ok(tirePressure({ mass: 81, width: 28, tubeless: true }).rear < road.rear);
   assert.equal(tirePressure({ mass: 0, width: 28 }), null);
+});
+
+test('tirePressure reste proche des résultats publiés de Silca', () => {
+  const road = tirePressure({ mass: 78, width: 30, surface: 'rough' });
+  assert.ok(Math.abs(road.rearPsi - 70) < 3, `arrière ${road.rearPsi}`);
+  assert.ok(Math.abs(road.frontPsi - 68) < 3, `avant ${road.frontPsi}`);
+  const gravel = tirePressure({ mass: 72.6, width: 42, surface: 'gravel' });
+  assert.ok(Math.abs(gravel.rearPsi - 40) < 4, `gravel ${gravel.rearPsi}`);
 });
 
 test('tirePressure plafonne à 5 bar sur jante hookless', () => {
