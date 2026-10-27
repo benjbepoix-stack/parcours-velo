@@ -54,28 +54,34 @@ export function gearTable(rings, cogs, wheelMm, cadence) {
 
 export const SURFACES = [
   { id: 'road', label: 'Route lisse', factor: 1 },
-  { id: 'rough', label: 'Route abîmée', factor: 0.93 },
-  { id: 'gravel', label: 'Gravel roulant', factor: 0.85 },
-  { id: 'chunky', label: 'Gravel cassant', factor: 0.77 }
+  { id: 'rough', label: 'Route abîmée', factor: 0.96 },
+  { id: 'gravel', label: 'Gravel roulant', factor: 0.95 },
+  { id: 'chunky', label: 'Gravel cassant', factor: 0.86 }
 ];
 
 export const PSI_PER_BAR = 14.5038;
 export const HOOKLESS_MAX_BAR = 5;
 
+/** Psi à l'arrière pour 1 kg de poids total sur un pneu mesuré de 1 mm (route lisse), voir tirePressure. */
+const REAR_PSI_COEF = 152;
+/** L'avant tourne environ 3 % sous l'arrière, comme dans les calculateurs récents. */
+const FRONT_RATIO = 0.97;
+
 /**
- * Pression de départ, avant et arrière (bar).
- * Base : règle publique de Frank Berto (le pneu s'écrase de 15 %), environ 95 psi pour 45 kg
- * sur un 23 mm, proportionnelle à la charge et à largeur^-1,5. Le facteur 0,9 rapproche cette
- * règle des pressions plus basses conseillées aujourd'hui. Charge : 45 % avant, 55 % arrière.
- * Corrections : terrain, tubeless (−5 %), plafond de 5 bar pour une jante hookless.
+ * Pression de départ, avant et arrière (bar), à partir du poids total (cycliste + vélo + équipement)
+ * et de la largeur mesurée du pneu.
+ * Base : la règle de Frank Berto (pression proportionnelle à la charge et à largeur^-1,5), recalée
+ * sur des résultats publiés du calculateur Silca : 78 kg, pneu de 30 mm, route abîmée → 68 / 70 psi ;
+ * 73 kg, pneu de 42 mm en gravel → environ 40 psi.
+ * Corrections : terrain, tubeless (−3 %), plafond de 5 bar pour une jante hookless.
  * Ce n'est pas le modèle de Silca : une estimation ouverte, à affiner au ressenti.
  */
 export function tirePressure({ mass, width, surface = 'road', tubeless = false, hookless = false }) {
   if (!(mass > 0) || !(width > 0)) return null;
-  const factor = (SURFACES.find(s => s.id === surface) || SURFACES[0]).factor * (tubeless ? 0.95 : 1);
-  const psi = kg => 95 * (kg / 45.4) * Math.pow(23 / width, 1.5) * 0.9 * factor;
-  let front = psi(mass * 0.45) / PSI_PER_BAR;
-  let rear = psi(mass * 0.55) / PSI_PER_BAR;
+  const factor = (SURFACES.find(s => s.id === surface) || SURFACES[0]).factor * (tubeless ? 0.97 : 1);
+  const rearPsi = (REAR_PSI_COEF * mass * factor) / Math.pow(width, 1.5);
+  let rear = rearPsi / PSI_PER_BAR;
+  let front = rear * FRONT_RATIO;
   const capped = hookless && rear > HOOKLESS_MAX_BAR;
   if (hookless) {
     front = Math.min(front, HOOKLESS_MAX_BAR);
