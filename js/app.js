@@ -12,7 +12,6 @@ import { icon, windArrow } from './ui/icons.js';
 import { elevationChart, attachElevationScrub, startsChart } from './ui/charts.js';
 import * as mapUi from './ui/map.js';
 import { initCols, setColsActive } from './ui/cols.js';
-import { initRaces, renderRaces } from './ui/races.js';
 import { initQuick, renderQuick, quickAnswers } from './ui/quick.js';
 import { initAtelier, renderAtelier } from './ui/atelier.js';
 
@@ -112,8 +111,8 @@ function showTab(name) {
     const active = b.dataset.tab === name;
     b.setAttribute(b.getAttribute('role') === 'tab' ? 'aria-selected' : 'aria-pressed', String(active));
   });
-  const previous = ['ride', 'cols', 'saved', 'races', 'atelier', 'profile'].find(t => !$(`#pane-${t}`).hidden);
-  ['ride', 'cols', 'saved', 'races', 'atelier', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
+  const previous = ['ride', 'cols', 'saved', 'atelier', 'profile'].find(t => !$(`#pane-${t}`).hidden);
+  ['ride', 'cols', 'saved', 'atelier', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
   activeTab = name;
   placeMap();
   // Téléphone : en changeant d'onglet depuis le bas de la page, on revient au début du panneau.
@@ -122,7 +121,6 @@ function showTab(name) {
     if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' });
   }
   if (name === 'saved') renderSaved();
-  if (name === 'races') renderRaces();
   if (name === 'atelier') renderAtelier();
   if (name === 'profile') {
     syncFromCarnet({ silent: true });
@@ -1137,7 +1135,7 @@ async function refreshCadenceAccount(message) {
     const email = await cadenceAccount();
     $('#cadenceForm').hidden = Boolean(email);
     $('#cadenceSignOut').hidden = !email;
-    status.textContent = message || (email ? `Connecté : ${email}. Les courses validées partent dans le planning de Cadence.` : 'Connectez-vous avec le compte de Cadence (le même que Carnet) pour y envoyer les courses validées et reprendre FTP et poids.');
+    status.textContent = message || (email ? `Connecté : ${email}. FTP et poids sont repris depuis Cadence.` : 'Connectez-vous avec le compte de Cadence (le même que Carnet) pour reprendre FTP et poids.');
   } catch {
     $('#cadenceForm').hidden = true;
     $('#cadenceSignOut').hidden = true;
@@ -1536,7 +1534,7 @@ function init() {
   });
   $('#cadenceSignOut').addEventListener('click', async () => {
     await signOutCadence().catch(() => {});
-    refreshCadenceAccount('Déconnecté : les courses restent présélectionnées ici jusqu’à votre prochaine connexion.');
+    refreshCadenceAccount('Déconnecté.');
   });
   $('#carnetSyncToggle').addEventListener('click', () => {
     carnetSync = !carnetSync;
@@ -1582,7 +1580,6 @@ function init() {
     }
   });
 
-  initRaces({ toast, getStart: () => (isPoint(prefs.start) ? prefs.start : null) });
   initAtelier({ getProfile: () => profile });
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});

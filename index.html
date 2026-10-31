@@ -158,29 +158,6 @@
         <div id="savedList" class="saved-list"></div>
       </section>
 
-      <!-- ============ COURSES ============ -->
-      <section class="pane" id="pane-races" role="tabpanel" aria-labelledby="tab-races" hidden>
-        <input class="input races-search" id="racesSearch" type="search" placeholder="Chercher une course, une ville…" autocomplete="off" aria-label="Chercher une course">
-        <div class="chips" id="racesYear" role="radiogroup" aria-label="Édition"></div>
-        <section class="races-around" aria-labelledby="racesAroundTitle">
-          <div class="races-around__head">
-            <div><span class="label" id="racesAroundTitle">Autour de</span><strong class="races-around__origin" id="racesOrigin"></strong></div>
-            <button type="button" class="relief-free" id="racesHere" aria-pressed="false"><span data-icon="locate"></span><span>Ma position</span></button>
-          </div>
-          <div class="range-field__head"><label class="label" for="racesRadius">Rayon</label><output class="range-field__value range-field__value--sm" id="racesRadiusOut" for="racesRadius"></output></div>
-          <input type="range" id="racesRadius" min="25" max="600" step="25">
-          <div class="races-around__row">
-            <div class="segmented segmented--two" id="racesSort" role="radiogroup" aria-label="Trier">
-              <button type="button" role="radio" data-race-sort="date" aria-checked="true">Par date</button>
-              <button type="button" role="radio" data-race-sort="distance" aria-checked="false">Par distance</button>
-            </div>
-            <button type="button" class="chip" role="checkbox" id="racesValidated" aria-checked="false">✓ Mes courses</button>
-          </div>
-        </section>
-        <div class="chips" id="racesGroups" role="radiogroup" aria-label="Région"></div>
-        <p class="races-count" id="racesCount"></p>
-        <div id="racesList"></div>
-      </section>
 
       <!-- ============ ATELIER ============ -->
       <section class="pane" id="pane-atelier" role="tabpanel" aria-labelledby="tab-atelier" hidden>
@@ -262,7 +239,7 @@
         </form>
         <section class="backup" aria-labelledby="cadenceTitle" id="cadenceAccount">
           <h2 class="h2" id="cadenceTitle">Compte Cadence</h2>
-          <p class="hint" id="cadenceStatus">Pour envoyer les courses validées au planning de Cadence.</p>
+          <p class="hint" id="cadenceStatus">Pour reprendre FTP et poids depuis Cadence.</p>
           <form class="form" id="cadenceForm" novalidate hidden>
             <div class="field"><label class="label" for="cadenceEmail">E-mail</label><input class="input" id="cadenceEmail" type="email" autocomplete="username" required></div>
             <div class="field"><label class="label" for="cadencePassword">Mot de passe</label><input class="input" id="cadencePassword" type="password" autocomplete="current-password" required></div>
@@ -297,7 +274,6 @@
         <button type="button" role="tab" class="tabbar__item" id="tab-ride" aria-controls="pane-ride" aria-selected="true" data-tab="ride"><span class="tabbar__icon" data-icon="route"></span><span class="tabbar__label">Étape</span></button>
         <button type="button" role="tab" class="tabbar__item" id="tab-cols" aria-controls="pane-cols" aria-selected="false" data-tab="cols"><span class="tabbar__icon" data-icon="peak"></span><span class="tabbar__label">Cols</span></button>
         <button type="button" role="tab" class="tabbar__item" id="tab-saved" aria-controls="pane-saved" aria-selected="false" data-tab="saved"><span class="tabbar__icon" data-icon="star"></span><span class="tabbar__label">Favoris</span><span class="count tabbar__count" id="savedCount"></span></button>
-        <button type="button" role="tab" class="tabbar__item" id="tab-races" aria-controls="pane-races" aria-selected="false" data-tab="races"><span class="tabbar__icon" data-icon="flag"></span><span class="tabbar__label">Courses</span></button>
         <button type="button" role="tab" class="tabbar__item" id="tab-atelier" aria-controls="pane-atelier" aria-selected="false" data-tab="atelier"><span class="tabbar__icon" data-icon="tool"></span><span class="tabbar__label">Atelier</span></button>
       </nav>
 
