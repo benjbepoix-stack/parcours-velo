@@ -3,6 +3,7 @@ import { COLS, SECTORS, TOP10 } from '../data/cols.js';
 import { haversine } from '../core/ride.js';
 import * as store from '../services/store.js';
 import { icon } from './icons.js';
+import { replay } from './motion.js';
 import * as mapUi from './map.js';
 
 const $ = sel => document.querySelector(sel);
@@ -129,6 +130,8 @@ function toggleDone(id) {
   else done[id] = Date.now();
   store.saveDone(done);
   renderCols();
+  // Col gravi : petit rebond de la coche (moment rare, on peut se le permettre).
+  if (done[id]) replay(document.querySelector(`[data-col="${id}"] [data-col-action="done"]`), 'is-popped', 500);
 }
 
 function focusCol(id) {

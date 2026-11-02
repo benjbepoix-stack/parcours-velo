@@ -6,6 +6,7 @@
  * position actuelle ou une recherche. Les réponses règlent le formulaire détaillé.
  */
 import { icon } from './icons.js';
+import { replay } from './motion.js';
 import { suggest } from '../services/geocode.js';
 import * as store from '../services/store.js';
 
@@ -229,9 +230,13 @@ export function renderQuick() {
 }
 
 function goTo(i) {
+  const dir = i >= step ? 'next' : 'prev';
   step = i;
   draft = {};
   renderQuick();
+  // Question suivante depuis la droite, retour en arrière depuis la gauche.
+  $('#quick').classList.remove('is-step-next', 'is-step-prev');
+  replay($('#quick'), `is-step-${dir}`, 500);
 }
 
 function answer(key, value) {

@@ -41,7 +41,12 @@
   --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
   --r: 14px;
   --r-lg: 20px;
-  --ease: cubic-bezier(.2, .8, .2, 1);
+  /* Mouvement : sortie franche pour les entrées et retours (ease-out marqué),
+     ease-in-out pour ce qui se déplace à l'écran. */
+  --ease: cubic-bezier(.23, 1, .32, 1);
+  --ease-in-out: cubic-bezier(.77, 0, .175, 1);
+  --rise: 8px;    /* distance des apparitions */
+  --press: .97;   /* échelle à l'appui */
   color-scheme: light;
 }
 :root[data-theme="dark"] {
@@ -205,10 +210,8 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--t
 
 /* ---------- Toasts ---------- */
 .toasts { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 2000; display: flex; flex-direction: column; gap: 8px; width: min(420px, calc(100% - 32px)); pointer-events: none; }
-.toast { padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow); font-size: 13.5px; font-weight: 650; animation: toast-in .3s var(--ease); }
+.toast { padding: 12px 14px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line-2); box-shadow: var(--shadow); font-size: 13.5px; font-weight: 650; }
 .toast--error { border-color: var(--danger); }
-@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition: none !important; animation: none !important; } }
 
 /* =========================================================
    Formulaire en étapes
@@ -673,3 +676,87 @@ body { background: var(--bg); }
 .elev-readout .is-down { color: var(--tail); }
 .route-cursor span { display: block; width: 22px; height: 22px; border-radius: 50%; background: var(--accent); border: 3px solid var(--ink); box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 35%, transparent), 0 2px 6px rgba(0, 0, 0, .35); }
 .map-wrap.is-floating { position: fixed; z-index: 950; top: calc(8px + env(safe-area-inset-top)); left: 8px; right: 8px; height: 36vh; min-height: 0; border-radius: var(--r-lg); overflow: hidden; box-shadow: var(--shadow); }
+
+/* =========================================================
+   Mouvement
+   Règles : transform et opacity seulement, entrées en ease-out, moins de 300 ms pour
+   l'interface courante. Les gestes fréquents (onglets, appuis) restent très courts ;
+   les moments rares (enregistrer, col gravi) ont droit à un petit rebond.
+   ========================================================= */
+@keyframes rise-in { from { opacity: 0; transform: translateY(var(--rise)); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes step-next { from { opacity: 0; transform: translateX(calc(var(--rise) * 2)); } }
+@keyframes step-prev { from { opacity: 0; transform: translateX(calc(var(--rise) * -2)); } }
+@keyframes drop-in { from { opacity: 0; transform: translateY(calc(var(--rise) * -1.5)); } }
+@keyframes wipe { from { clip-path: inset(0 100% 0 0); } }
+@keyframes grow { from { transform: scaleY(.2); opacity: 0; } }
+@keyframes pop { 0% { transform: scale(.7); } 60% { transform: scale(1.18); } 100% { transform: scale(1); } }
+
+/* Appui : retour immédiat sur tout ce qui se touche */
+.option, .chip, .segmented button, .icon-btn, .add-stop, .quick__row, .done-toggle, .relief-free, .gears td button, .link-out {
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease, transform .16s var(--ease);
+}
+.option:active, .chip:active, .segmented button:active, .icon-btn:active, .add-stop:active, .quick__row:active, .done-toggle:active, .relief-free:active, .gears td button:active, .link-out:active { transform: scale(var(--press)); }
+.btn:active { transform: scale(var(--press)); }
+
+/* Onglets : le panneau affiché arrive en fondu avec un léger glissement (pas de fill :
+   un transform résiduel casserait la carte flottante en position fixe). */
+.pane:not([hidden]) { animation: rise-in .22s var(--ease); }
+details.about[open] > :not(summary) { animation: rise-in .22s var(--ease); }
+
+/* Barre d'onglets : le trait jaune glisse d'un onglet à l'autre */
+.tabbar__glider { position: absolute; left: 0; bottom: 7px; width: 18px; height: 3px; border-radius: 2px; background: var(--accent); pointer-events: none; opacity: 0; }
+.tabbar.has-glider .tabbar__item[aria-selected="true"]::after { content: none; }
+.tabbar.is-ready .tabbar__glider { transition: transform .28s var(--ease-in-out), opacity .15s ease; }
+.count.is-bump { animation: pop .36s var(--ease); }
+
+/* Résultats : les boucles arrivent l'une après l'autre, puis le détail */
+.is-fresh .option, .forecast.is-fresh { animation: rise-in .3s var(--ease) backwards; }
+.is-fresh .option:nth-child(2) { animation-delay: 40ms; }
+.is-fresh .option:nth-child(3) { animation-delay: 80ms; }
+.is-fresh .option:nth-child(4) { animation-delay: 120ms; }
+.is-fresh .option:nth-child(5) { animation-delay: 160ms; }
+.is-fresh .option:nth-child(6) { animation-delay: 200ms; }
+.is-fresh .option:nth-child(n+7) { animation-delay: 240ms; }
+.is-fresh .detail { animation: rise-in .32s var(--ease) .12s backwards; }
+
+/* Graphiques : le profil se trace de gauche à droite, les barres de départ montent */
+.is-drawing .elev__trace { animation: wipe .45s var(--ease-in-out) backwards; }
+.is-drawing .slot__bar { transform-box: fill-box; transform-origin: 50% 100%; animation: grow .32s var(--ease) backwards; animation-delay: calc(var(--i, 0) * 18ms); }
+
+/* Saisie rapide : la question suivante glisse depuis la droite, la précédente depuis la gauche */
+#quick.is-step-next > * { animation: step-next .24s var(--ease) backwards; }
+#quick.is-step-prev > * { animation: step-prev .24s var(--ease) backwards; }
+#quick.is-step-next > :nth-child(2), #quick.is-step-prev > :nth-child(2) { animation-delay: 30ms; }
+#quick.is-step-next > :nth-child(n+3), #quick.is-step-prev > :nth-child(n+3) { animation-delay: 60ms; }
+
+/* Favoris : les cartes entrent en cascade à l'ouverture de l'onglet */
+.saved-list.is-fresh > * { animation: rise-in .28s var(--ease) backwards; }
+.saved-list.is-fresh > :nth-child(2) { animation-delay: 40ms; }
+.saved-list.is-fresh > :nth-child(3) { animation-delay: 80ms; }
+.saved-list.is-fresh > :nth-child(n+4) { animation-delay: 120ms; }
+
+/* Moments rares : enregistrer un parcours, marquer un col comme gravi */
+.is-popped svg, .done-toggle.is-popped svg { animation: pop .4s var(--ease); }
+
+/* Carte flottante pendant le glissement sur le profil */
+.map-wrap.is-floating { animation: drop-in .24s var(--ease); }
+
+/* Notifications : entrent et sortent par le bas */
+.toast { transition: opacity .3s ease, transform .3s var(--ease); }
+@starting-style { .toast { opacity: 0; transform: translateY(100%); } }
+.toast.is-leaving { opacity: 0; transform: translateY(100%); }
+
+/* Changement de thème : fondu enchaîné (View Transitions) */
+::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
+
+/* Mouvement réduit : on garde les fondus utiles, on retire déplacements, rebonds et cascades. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --rise: 0px; --press: 1; }
+  .tabbar.is-ready .tabbar__glider { transition: opacity .15s ease; }
+  .is-drawing .elev__trace, .is-drawing .slot__bar { animation: fade-in .2s ease backwards; }
+  .count.is-bump, .is-popped svg, .done-toggle.is-popped svg { animation: none; }
+  .toast, .toast.is-leaving { transform: none; }
+  @starting-style { .toast { transform: none; } }
+  .leaflet-container *, .leaflet-container *::before, .leaflet-container *::after { transition: none !important; animation: none !important; }
+}
