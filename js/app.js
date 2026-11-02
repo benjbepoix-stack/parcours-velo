@@ -15,7 +15,7 @@ import { initCols, setColsActive } from './ui/cols.js';
 import { initQuick, renderQuick, quickAnswers } from './ui/quick.js';
 import { initAtelier, renderAtelier } from './ui/atelier.js';
 import { replay, countUp, leave, withViewTransition } from './ui/motion.js';
-import { startQuips, stopQuips } from './ui/loading.js';
+import { startQuips, stopQuips, startClimb, setClimb, stopClimb } from './ui/loading.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -620,11 +620,18 @@ function readForm() {
 function setProgress(done, total, label) {
   const el = $('#progress');
   el.hidden = false;
-  // La jauge et le coureur lisent la même valeur.
   const pct = Math.round((done / total) * 100);
-  el.style.setProperty('--value', `${pct}%`);
   el.querySelector('.progress__pct').textContent = `${pct} %`;
+  setClimb(done / total);
   el.querySelector('.progress__label').textContent = label;
+}
+
+/** Compteurs du profil animé : distance et D+ visés (masqués quand la distance n'est pas fixée). */
+function climbTarget(input) {
+  const km = input.km || null;
+  const relief = prefs.relief === 'free' ? (input.ascent && km && input.ascent / km > 12 ? 'hilly' : 'any') : prefs.relief;
+  const ascent = input.ascent ?? (km ? km * (RELIEF[prefs.relief]?.climb ?? 9) : null);
+  return { relief, km, ascent };
 }
 
 async function generate(event) {
@@ -640,6 +647,7 @@ async function generate(event) {
   $('#submitBtn').disabled = true;
   setProgress(0, 1, 'Préparation…');
   startQuips($('#progress .progress__quip'));
+  startClimb($('#progress .climb'), climbTarget(input));
   try {
     if (input.mode === 'multi') {
       const trip = await planMultiDay({ ...input, onProgress: setProgress, signal: controller.signal });
@@ -667,6 +675,7 @@ async function generate(event) {
       $('#submitBtn').disabled = false;
       $('#progress').hidden = true;
       stopQuips();
+      stopClimb();
     }
   }
 }
