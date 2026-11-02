@@ -131,26 +131,35 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--t
 .btn--sm { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
 
 .progress { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); font-weight: 650; }
-.progress__track { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.progress__bar { height: 100%; width: var(--value, 0%); background: var(--accent); border-radius: inherit; transition: width .5s var(--ease-in-out); }
-.progress__text { display: flex; flex-direction: column; gap: 1px; min-height: 36px; }
-.progress__quip { color: var(--text); font-size: 13.5px; font-weight: 750; }
-.progress__label { color: var(--text-3); font-size: 12px; }
+.progress__track { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.progress__bar { position: relative; height: 100%; width: var(--value, 0%); min-width: 8px; background: var(--accent); border-radius: inherit; overflow: hidden; transition: width .5s var(--ease-in-out); }
+.progress__bar::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .45), transparent); transform: translateX(-100%); }
+.progress__text { display: flex; flex-direction: column; gap: 2px; min-height: 38px; }
+.progress__quip { color: var(--text); font-size: 14px; font-weight: 750; letter-spacing: -.01em; }
+.progress__meta { display: flex; justify-content: space-between; gap: 12px; color: var(--text-3); font-size: 12px; }
+.progress__pct { font-variant-numeric: tabular-nums; font-weight: 750; color: var(--text-2); }
 
 /* Calcul en cours : un petit coureur roule sur la route qui se trace (jauge réelle) */
-.ride-scene { position: relative; height: 46px; }
-.ride-scene__lane { position: absolute; left: 0; right: 56px; bottom: 5px; height: 42px; transform: translateX(var(--value, 0%)); transition: transform .5s var(--ease-in-out); }
+.ride-scene { position: relative; height: 52px; }
+.ride-scene__lane { position: absolute; left: 0; right: 60px; bottom: 8px; height: 45px; transform: translateX(var(--value, 0%)); transition: transform .5s var(--ease-in-out); }
 .rider { display: block; overflow: visible; fill: none; stroke: var(--text); stroke-linecap: round; stroke-linejoin: round; }
-.rider__wheel circle { stroke-width: 1.6; }
-.rider__spokes { stroke: var(--text-3); stroke-width: .7; }
-.rider__frame { stroke: var(--text-2); stroke-width: 1.4; }
-.rider__arm { stroke: var(--text-2); stroke-width: 1.4; }
-.rider__body { stroke: var(--accent); stroke-width: 4; }
-.rider__limb, .rider__leg { stroke-width: 2.4; }
+.rider__shadow { fill: var(--text); stroke: none; opacity: .1; }
+.rider__tire { stroke-width: 1.3; }
+.rider__rim { stroke: var(--surface-2); stroke-width: 2.4; }
+.rider__decal { stroke: var(--accent); stroke-width: 2.4; stroke-dasharray: 4 12.65; stroke-linecap: butt; }
+.rider__axle, .rider__face { fill: var(--text); stroke: none; }
+.rider__frame { stroke: var(--text-2); stroke-width: 1.9; }
+.rider__bars, .rider__saddle { stroke-width: 1.6; }
+.rider__ring { stroke: var(--text-2); stroke-width: 1.2; }
+.rider__arm { stroke: var(--text-2); stroke-width: 1.5; }
+.rider__body { fill: var(--accent); stroke: none; }
+.rider__helmet { fill: var(--text); stroke: none; }
+.rider__visor { stroke: var(--sky); stroke-width: 1.3; }
+.rider__limb { stroke-width: 2.2; }
+.rider__leg { stroke-width: 3; }
 .rider__leg--back { stroke: var(--text-3); }
-.rider__head { fill: var(--text); stroke: none; }
-.rider__wind { stroke: var(--sky); stroke-width: 1.2; }
-.rider__spokes, .rider__arm, .leg__thigh, .leg__shin { transform-box: view-box; transform-origin: 0 0; }
+.rider__speed { stroke: var(--text-3); stroke-width: 1.4; }
+.rider__hub, .rider__arm, .leg__thigh, .leg__shin { transform-box: view-box; transform-origin: 0 0; }
 /* Position fixe (mouvement réduit) : pédales à l'horizontale */
 .leg__thigh { transform: rotate(24deg); }
 .leg__shin { transform: rotate(74.5deg); }
@@ -774,21 +783,23 @@ details.about[open] > :not(summary) { animation: rise-in .22s var(--ease); }
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
 
 /* Coureur du calcul : pédalage (cinématique calculée pour un pédalier de 3,6 et des
-   segments de jambe de 8,6), roues qui tournent, filets de vent de face.
+   segments de jambe de 8,6), roues qui tournent, traînées de vitesse, reflet sur la jauge.
    Animations en boucle, linéaires : c'est un mouvement mécanique continu. */
 @keyframes thigh { 0% { transform: rotate(24deg); } 8.33% { transform: rotate(37.4deg); } 16.67% { transform: rotate(49.6deg); } 25% { transform: rotate(56.6deg); } 33.33% { transform: rotate(57.3deg); } 41.67% { transform: rotate(53.8deg); } 50% { transform: rotate(47.2deg); } 58.33% { transform: rotate(37deg); } 66.67% { transform: rotate(23.7deg); } 75% { transform: rotate(11.6deg); } 83.33% { transform: rotate(7.6deg); } 91.67% { transform: rotate(12.8deg); } 100% { transform: rotate(24deg); } }
 @keyframes shin { 0% { transform: rotate(74.5deg); } 8.33% { transform: rotate(57.3deg); } 16.67% { transform: rotate(45.5deg); } 25% { transform: rotate(45.1deg); } 33.33% { transform: rotate(56.3deg); } 41.67% { transform: rotate(73.3deg); } 50% { transform: rotate(91.4deg); } 58.33% { transform: rotate(107.3deg); } 66.67% { transform: rotate(117.2deg); } 75% { transform: rotate(117.5deg); } 83.33% { transform: rotate(108.1deg); } 91.67% { transform: rotate(92.5deg); } 100% { transform: rotate(74.5deg); } }
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes gust { 0% { opacity: 0; transform: translateX(0); } 30% { opacity: .9; } 100% { opacity: 0; transform: translateX(-9px); } }
+@keyframes trail { 0% { opacity: 0; transform: translateX(4px); } 30% { opacity: .8; } 100% { opacity: 0; transform: translateX(-8px); } }
+@keyframes shimmer { to { transform: translateX(100%); } }
 .rider { --cadence: .9s; }
 .rider__leg .leg__thigh { animation: thigh var(--cadence) linear infinite; }
 .rider__leg .leg__shin { animation: shin var(--cadence) linear infinite; }
 .rider__leg--back .leg__thigh, .rider__leg--back .leg__shin { animation-delay: calc(var(--cadence) / -2); }
 .rider__arm { animation: spin var(--cadence) linear infinite; }
-.rider__spokes { animation: spin .55s linear infinite; }
-.rider__wind line { animation: gust 1.1s linear infinite; }
-.rider__wind line:nth-child(2) { animation-delay: -.4s; }
-.rider__wind line:nth-child(3) { animation-delay: -.75s; }
+.rider__hub { animation: spin .55s linear infinite; }
+.rider__speed line { animation: trail .9s linear infinite; }
+.rider__speed line:nth-child(2) { animation-delay: -.3s; }
+.rider__speed line:nth-child(3) { animation-delay: -.6s; }
+.progress__bar::after { animation: shimmer 1.6s var(--ease-in-out) infinite; }
 .progress__quip.is-quip { animation: rise-in .3s var(--ease); }
 
 /* Mouvement réduit : on garde les fondus utiles, on retire déplacements, rebonds et cascades. */
@@ -799,7 +810,7 @@ details.about[open] > :not(summary) { animation: rise-in .22s var(--ease); }
   .count.is-bump, .is-popped svg, .done-toggle.is-popped svg { animation: none; }
   .toast, .toast.is-leaving { transform: none; }
   @starting-style { .toast { transform: none; } }
-  .rider *, .ride-scene__lane, .progress__bar { animation: none !important; transition: none; }
-  .rider__wind { display: none; }
+  .rider *, .ride-scene__lane, .progress__bar, .progress__bar::after { animation: none !important; transition: none; }
+  .rider__speed, .progress__bar::after { display: none; }
   .leaflet-container *, .leaflet-container *::before, .leaflet-container *::after { transition: none !important; animation: none !important; }
 }

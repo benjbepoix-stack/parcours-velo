@@ -621,7 +621,9 @@ function setProgress(done, total, label) {
   const el = $('#progress');
   el.hidden = false;
   // La jauge et le coureur lisent la même valeur.
-  el.style.setProperty('--value', `${Math.round((done / total) * 100)}%`);
+  const pct = Math.round((done / total) * 100);
+  el.style.setProperty('--value', `${pct}%`);
+  el.querySelector('.progress__pct').textContent = `${pct} %`;
   el.querySelector('.progress__label').textContent = label;
 }
 

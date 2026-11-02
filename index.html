@@ -114,21 +114,27 @@
               <div class="ride-scene" aria-hidden="true">
                 <div class="progress__track"><div class="progress__bar"></div></div>
                 <div class="ride-scene__lane">
-                  <svg class="rider" viewBox="0 0 48 36" width="56" height="42">
-                    <g class="rider__wind"><line x1="47" y1="6" x2="51" y2="6"/><line x1="46" y1="12.5" x2="51" y2="12.5"/><line x1="47" y1="19" x2="50" y2="19"/></g>
+                  <svg class="rider" viewBox="0 0 48 36" width="60" height="45">
+                    <ellipse class="rider__shadow" cx="24" cy="35.2" rx="17" ry="1"/>
+                    <g class="rider__speed"><line x1="-9" y1="11" x2="-2" y2="11"/><line x1="-12" y1="17" x2="-4" y2="17"/><line x1="-8" y1="23" x2="-3" y2="23"/></g>
                     <g class="rider__leg rider__leg--back" transform="translate(19 15)"><g class="leg__thigh"><line x2="8.6"/><g transform="translate(8.6 0)"><g class="leg__shin"><line x2="8.6"/></g></g></g></g>
-                    <g class="rider__wheel" transform="translate(10 28)"><circle r="7"/><g class="rider__spokes"><line x1="-7" x2="7"/><line x1="-3.5" y1="-6.06" x2="3.5" y2="6.06"/><line x1="-3.5" y1="6.06" x2="3.5" y2="-6.06"/></g></g>
-                    <g class="rider__wheel" transform="translate(38 28)"><circle r="7"/><g class="rider__spokes"><line x1="-7" x2="7"/><line x1="-3.5" y1="-6.06" x2="3.5" y2="6.06"/><line x1="-3.5" y1="6.06" x2="3.5" y2="-6.06"/></g></g>
-                    <path class="rider__frame" d="M10 28 22 27 19.5 16.5 10 28M19.5 16.5 34 15.5 22 27M34 15.5 38 28M34 15.5 35.5 12.5h2M17 15.8h5"/>
+                    <g class="rider__wheel" transform="translate(10 28)"><circle class="rider__tire" r="6.6"/><circle class="rider__rim" r="5.3"/><g class="rider__hub"><circle class="rider__decal" r="5.3"/></g><circle class="rider__axle" r="1"/></g>
+                    <g class="rider__wheel" transform="translate(38 28)"><circle class="rider__tire" r="6.6"/><circle class="rider__rim" r="5.3"/><g class="rider__hub"><circle class="rider__decal" r="5.3"/></g><circle class="rider__axle" r="1"/></g>
+                    <path class="rider__frame" d="M10 28 22 27 19.5 16.5 10 28M19.5 16.5 34 15.5 22 27M34 15.5 38 28M34 15.5 35 12.8"/>
+                    <path class="rider__bars" d="M34.2 12.8h3.2q1.2 0 1 1.4"/>
+                    <path class="rider__saddle" d="M16.6 15.9h5"/>
+                    <circle class="rider__ring" cx="22" cy="27" r="2.4"/>
                     <g class="rider__crank" transform="translate(22 27)"><g class="rider__arm"><line x1="-3.6" x2="3.6"/></g></g>
-                    <path class="rider__body" d="M19 15 31 9.5"/>
-                    <path class="rider__limb" d="M31 9.5 36.5 13.5"/>
-                    <circle class="rider__head" cx="34.3" cy="6.3" r="2.6"/>
+                    <path class="rider__body" d="M17.6 15.6C19.4 11 25.8 8.4 31.6 8.6l.6 2.6c-4.6.4-9.8 2.6-11.6 6.2z"/>
+                    <path class="rider__limb" d="M31.2 10.2 34 12.6l2.6.6"/>
+                    <circle class="rider__face" cx="34.9" cy="7.9" r="1.9"/>
+                    <path class="rider__helmet" d="M30.4 7C31.6 3.8 35.6 3.2 37.6 5.4c.6.7.5 1.5-.2 1.7L32.2 7.6z"/>
+                    <path class="rider__visor" d="M35.6 6.6h2"/>
                     <g class="rider__leg rider__leg--front" transform="translate(19 15)"><g class="leg__thigh"><line x2="8.6"/><g transform="translate(8.6 0)"><g class="leg__shin"><line x2="8.6"/></g></g></g></g>
                   </svg>
                 </div>
               </div>
-              <p class="progress__text"><span class="progress__quip" aria-hidden="true"></span><span class="progress__label" role="status"></span></p>
+              <p class="progress__text"><span class="progress__quip" aria-hidden="true"></span><span class="progress__meta"><span class="progress__label" role="status"></span><span class="progress__pct" aria-hidden="true"></span></span></p>
             </div>
           </div>
         </form>
