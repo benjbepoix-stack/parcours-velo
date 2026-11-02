@@ -15,6 +15,7 @@ import { initCols, setColsActive } from './ui/cols.js';
 import { initQuick, renderQuick, quickAnswers } from './ui/quick.js';
 import { initAtelier, renderAtelier } from './ui/atelier.js';
 import { replay, countUp, leave, withViewTransition } from './ui/motion.js';
+import { startQuips, stopQuips } from './ui/loading.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -619,7 +620,8 @@ function readForm() {
 function setProgress(done, total, label) {
   const el = $('#progress');
   el.hidden = false;
-  el.querySelector('.progress__bar').style.setProperty('--value', `${Math.round((done / total) * 100)}%`);
+  // La jauge et le coureur lisent la même valeur.
+  el.style.setProperty('--value', `${Math.round((done / total) * 100)}%`);
   el.querySelector('.progress__label').textContent = label;
 }
 
@@ -635,6 +637,7 @@ async function generate(event) {
   running = controller;
   $('#submitBtn').disabled = true;
   setProgress(0, 1, 'Préparation…');
+  startQuips($('#progress .progress__quip'));
   try {
     if (input.mode === 'multi') {
       const trip = await planMultiDay({ ...input, onProgress: setProgress, signal: controller.signal });
@@ -658,8 +661,11 @@ async function generate(event) {
     if (error.name !== 'AbortError') toast(friendlyError(error), { error: true });
   } finally {
     if (running === controller) running = null;
-    $('#submitBtn').disabled = false;
-    $('#progress').hidden = true;
+    if (running === null) {
+      $('#submitBtn').disabled = false;
+      $('#progress').hidden = true;
+      stopQuips();
+    }
   }
 }
 

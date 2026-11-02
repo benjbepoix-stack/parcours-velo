@@ -110,7 +110,26 @@
 
           <div class="cta">
             <button type="submit" class="btn btn--primary btn--lg" id="submitBtn"><span data-icon="route"></span><span id="submitLabel">Trouver mes boucles</span></button>
-            <div class="progress" id="progress" hidden aria-live="polite"><div class="progress__track"><div class="progress__bar"></div></div><span class="progress__label"></span></div>
+            <div class="progress" id="progress" hidden>
+              <div class="ride-scene" aria-hidden="true">
+                <div class="progress__track"><div class="progress__bar"></div></div>
+                <div class="ride-scene__lane">
+                  <svg class="rider" viewBox="0 0 48 36" width="56" height="42">
+                    <g class="rider__wind"><line x1="47" y1="6" x2="51" y2="6"/><line x1="46" y1="12.5" x2="51" y2="12.5"/><line x1="47" y1="19" x2="50" y2="19"/></g>
+                    <g class="rider__leg rider__leg--back" transform="translate(19 15)"><g class="leg__thigh"><line x2="8.6"/><g transform="translate(8.6 0)"><g class="leg__shin"><line x2="8.6"/></g></g></g></g>
+                    <g class="rider__wheel" transform="translate(10 28)"><circle r="7"/><g class="rider__spokes"><line x1="-7" x2="7"/><line x1="-3.5" y1="-6.06" x2="3.5" y2="6.06"/><line x1="-3.5" y1="6.06" x2="3.5" y2="-6.06"/></g></g>
+                    <g class="rider__wheel" transform="translate(38 28)"><circle r="7"/><g class="rider__spokes"><line x1="-7" x2="7"/><line x1="-3.5" y1="-6.06" x2="3.5" y2="6.06"/><line x1="-3.5" y1="6.06" x2="3.5" y2="-6.06"/></g></g>
+                    <path class="rider__frame" d="M10 28 22 27 19.5 16.5 10 28M19.5 16.5 34 15.5 22 27M34 15.5 38 28M34 15.5 35.5 12.5h2M17 15.8h5"/>
+                    <g class="rider__crank" transform="translate(22 27)"><g class="rider__arm"><line x1="-3.6" x2="3.6"/></g></g>
+                    <path class="rider__body" d="M19 15 31 9.5"/>
+                    <path class="rider__limb" d="M31 9.5 36.5 13.5"/>
+                    <circle class="rider__head" cx="34.3" cy="6.3" r="2.6"/>
+                    <g class="rider__leg rider__leg--front" transform="translate(19 15)"><g class="leg__thigh"><line x2="8.6"/><g transform="translate(8.6 0)"><g class="leg__shin"><line x2="8.6"/></g></g></g></g>
+                  </svg>
+                </div>
+              </div>
+              <p class="progress__text"><span class="progress__quip" aria-hidden="true"></span><span class="progress__label" role="status"></span></p>
+            </div>
           </div>
         </form>
 
