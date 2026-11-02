@@ -14,6 +14,7 @@ import * as mapUi from './ui/map.js';
 import { initCols, setColsActive } from './ui/cols.js';
 import { initQuick, renderQuick, quickAnswers } from './ui/quick.js';
 import { initAtelier, renderAtelier } from './ui/atelier.js';
+import { replay, countUp, leave, withViewTransition } from './ui/motion.js';
 
 const $ = sel => document.querySelector(sel);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -70,7 +71,12 @@ function toast(message, { error = false } = {}) {
   el.className = `toast${error ? ' toast--error' : ''}`;
   el.textContent = message;
   $('#toasts').appendChild(el);
-  setTimeout(() => el.remove(), error ? 5000 : 2800);
+  // Sortie par le même bord que l'entrée (transition CSS), puis retrait.
+  setTimeout(() => {
+    el.classList.add('is-leaving');
+    el.addEventListener('transitionend', () => el.remove(), { once: true });
+    setTimeout(() => el.remove(), 400);
+  }, error ? 5000 : 2800);
 }
 
 const rider = () => ({
@@ -104,6 +110,24 @@ function placeMap() {
   if (wrap && target && wrap.parentElement !== target) target.appendChild(wrap);
 }
 
+/* Trait jaune sous l'onglet actif : un seul élément qui glisse d'un onglet à l'autre. */
+function moveGlider() {
+  const bar = $('.tabbar');
+  if (!bar) return;
+  let glider = bar.querySelector('.tabbar__glider');
+  if (!glider) {
+    glider = Object.assign(document.createElement('span'), { className: 'tabbar__glider' });
+    glider.setAttribute('aria-hidden', 'true');
+    bar.append(glider);
+    bar.classList.add('has-glider');
+  }
+  const item = bar.querySelector('[aria-selected="true"]');
+  glider.style.opacity = item ? '1' : '0';
+  if (item) glider.style.transform = `translateX(${item.offsetLeft + item.offsetWidth / 2 - glider.offsetWidth / 2}px)`;
+  // Première position sans animation, ensuite le trait glisse.
+  if (!bar.classList.contains('is-ready')) requestAnimationFrame(() => bar.classList.add('is-ready'));
+}
+
 function showTab(name) {
   // Le bouton Profil vit dans l'en-tête, hors de la barre d'onglets (role="tablist") :
   // c'est un simple bouton bascule, donc aria-pressed plutôt qu'aria-selected.
@@ -114,13 +138,14 @@ function showTab(name) {
   const previous = ['ride', 'cols', 'saved', 'atelier', 'profile'].find(t => !$(`#pane-${t}`).hidden);
   ['ride', 'cols', 'saved', 'atelier', 'profile'].forEach(t => ($(`#pane-${t}`).hidden = t !== name));
   activeTab = name;
+  moveGlider();
   placeMap();
   // Téléphone : en changeant d'onglet depuis le bas de la page, on revient au début du panneau.
   if (previous !== name && matchMedia('(max-width: 959px)').matches) {
     const top = $('#panel').getBoundingClientRect().top + window.scrollY;
     if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' });
   }
-  if (name === 'saved') renderSaved();
+  if (name === 'saved') renderSaved({ fresh: previous !== name });
   if (name === 'atelier') renderAtelier();
   if (name === 'profile') {
     syncFromCarnet({ silent: true });
@@ -697,7 +722,12 @@ function renderAll({ fit = true } = {}) {
   }
   $('#options').hidden = false;
   renderOptions();
-  renderDetail();
+  renderDetail({ draw: fit });
+  // Nouveaux résultats (pas un simple recalcul) : les boucles et le détail entrent en cascade.
+  if (fit) {
+    replay($('#results'), 'is-fresh', 900);
+    replay($('#forecast'), 'is-fresh', 600);
+  }
   mapUi.drawRoute(result.routes[selected], { fit });
 }
 
@@ -707,6 +737,7 @@ function renderMultiAll({ fit = true } = {}) {
   $('#options').hidden = true;
   $('#results').hidden = false;
   renderMultiDetail();
+  if (fit) replay($('#results'), 'is-fresh', 900);
   mapUi.drawRoute({ coords: result.trip.coords }, { fit });
 }
 
@@ -852,7 +883,18 @@ function startSlots(r) {
   });
 }
 
-function renderDetail() {
+const STAT_FIELDS = [
+  { key: 'meters', label: 'Distance', format: v => fmtKm(v) },
+  { key: 'ascent', label: 'Dénivelé positif', format: v => `${Math.round(v)} m` },
+  { key: 'seconds', label: 'Durée estimée', format: v => fmtDur(v) },
+  { key: 'speed', label: 'Moyenne', format: v => `${v.toFixed(1).replace('.', ',')} km/h` }
+];
+
+// Valeurs affichées au rendu précédent : les chiffres défilent vers les nouvelles.
+let shownStats = null;
+let justSaved = false;
+
+function renderDetail({ draw = false } = {}) {
   const r = result.routes[selected];
   const width = $('#detail').clientWidth - 34 || 360;
   const speed = r.meters / 1000 / (r.sim.seconds / 3600);
@@ -865,15 +907,13 @@ function renderDetail() {
   const best = slots.length ? slots.reduce((a, b) => (b.seconds < a.seconds ? b : a)) : null;
   const gain = best ? Math.round((r.sim.seconds - best.seconds) / 60) : 0;
   const isSaved = saved.some(s => s.id === r.savedId);
+  const stats = { meters: r.meters, ascent: r.ascent, seconds: r.sim.seconds, speed };
 
   $('#detail').innerHTML = `
     <h3 class="detail__title">${esc(routeName(r))}</h3>
     <p class="detail__sub">${esc(reliefLabel())} · départ ${hhmm(result.startTime)} · ${result.loop === false ? 'arrivée' : 'retour'} vers ${hLabel(back)}${r.subtitle ? ` · ${esc(r.subtitle.toLowerCase())}` : ''}</p>
     <div class="stats">
-      <div class="stat"><strong>${fmtKm(r.meters)}</strong><span>Distance</span></div>
-      <div class="stat"><strong>${Math.round(r.ascent)} m</strong><span>Dénivelé positif</span></div>
-      <div class="stat"><strong>${fmtDur(r.sim.seconds)}</strong><span>Durée estimée</span></div>
-      <div class="stat"><strong>${speed.toFixed(1).replace('.', ',')} km/h</strong><span>Moyenne à ${Math.round(rider().power)} W</span></div>
+      ${STAT_FIELDS.map(f => `<div class="stat"><strong data-stat="${f.key}">${f.format(stats[f.key])}</strong><span>${f.key === 'speed' ? `Moyenne à ${Math.round(rider().power)} W` : f.label}</span></div>`).join('')}
     </div>
 
     <section class="block">
@@ -925,13 +965,20 @@ function renderDetail() {
 
     <div class="actions">
       <button type="button" class="btn btn--primary" data-action="gpx">${icon('download')}<span>Exporter GPX</span></button>
-      <button type="button" class="btn btn--soft" data-action="save" ${isSaved ? 'disabled' : ''}>${icon('star')}<span>${isSaved ? 'Enregistré' : 'Enregistrer'}</span></button>
+      <button type="button" class="btn btn--soft${isSaved && justSaved ? ' is-popped' : ''}" data-action="save" ${isSaved ? 'disabled' : ''}>${icon('star')}<span>${isSaved ? 'Enregistré' : 'Enregistrer'}</span></button>
       <a class="btn btn--soft" href="${esc(stravaLink(r))}" target="_blank" rel="noopener">${icon('external')}<span>Heatmap Strava</span></a>
       ${r.waypoints ? `<a class="btn btn--soft" href="${esc(brouterWebLink(r.waypoints, r.quiet || prefs.quiet))}" target="_blank" rel="noopener">${icon('edit')}<span>Retoucher</span></a>` : ''}
       <p class="export-hint">Komoot, Garmin, Wahoo : exportez le GPX puis choisissez l’app dans la feuille de partage (ou importez-le sur komoot.com).</p>
     </div>`;
   attachElevationScrub($('#elevBlock'), r, { onMove: mapUi.showCursor, onStart: floatMap, onEnd: dockMapSoon });
+  justSaved = false;
+  // Graphiques tracés à l'arrivée d'un parcours (nouveau résultat ou autre boucle choisie).
+  if (draw) replay($('#detail'), 'is-drawing', 900);
+  else $('#detail').classList.remove('is-drawing');
+  if (shownStats) STAT_FIELDS.forEach(f => countUp($(`#detail [data-stat="${f.key}"]`), shownStats[f.key], stats[f.key], f.format));
+  shownStats = stats;
 }
+
 
 /*
  * Téléphone : pendant qu'on glisse sur le profil, la carte (restée plus haut dans la page)
@@ -1019,6 +1066,8 @@ function saveRoute(r) {
   }
   r.savedId = id;
   renderSavedCount();
+  replay($('#savedCount'), 'is-bump', 500);
+  justSaved = true;
   renderDetail();
   toast('Parcours enregistré dans vos favoris');
 }
@@ -1027,8 +1076,9 @@ function renderSavedCount() {
   $('#savedCount').textContent = saved.length ? String(saved.length) : '';
 }
 
-function renderSaved() {
+function renderSaved({ fresh = false } = {}) {
   const host = $('#savedList');
+  if (fresh) replay(host, 'is-fresh', 700);
   if (!saved.length) {
     host.innerHTML = `<div class="empty">Aucun parcours enregistré.<br>Générez une boucle puis touchez « Enregistrer ».</div>`;
     return;
@@ -1068,7 +1118,7 @@ async function openSaved(item) {
   }
 }
 
-function onSavedAction(e) {
+async function onSavedAction(e) {
   const btn = e.target.closest('[data-saved]');
   if (!btn) return;
   const card = btn.closest('[data-id]');
@@ -1106,6 +1156,7 @@ function onSavedAction(e) {
     }
     saved = saved.filter(s => s !== item);
     store.storeSaved(saved);
+    await leave(btn.closest('.saved'));
     renderSaved();
     renderSavedCount();
     toast('Parcours supprimé');
@@ -1369,9 +1420,11 @@ function init() {
   $('#themeToggle').addEventListener('click', () => {
     const theme = isDark() ? 'light' : 'dark';
     store.saveTheme(theme);
-    applyTheme(theme);
+    withViewTransition(() => applyTheme(theme));
   });
   document.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => showTab(b.dataset.tab)));
+  moveGlider();
+  addEventListener('resize', moveGlider);
   document.addEventListener('click', e => {
     const go = e.target.closest('[data-go]');
     if (go) showTab(go.dataset.go);
@@ -1485,7 +1538,7 @@ function init() {
     if (!opt) return;
     selected = Number(opt.dataset.route);
     renderOptions();
-    renderDetail();
+    renderDetail({ draw: true });
     renderForecast();
     mapUi.drawRoute(result.routes[selected]);
   });
