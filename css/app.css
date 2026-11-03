@@ -130,9 +130,28 @@ select.input { background-image: linear-gradient(45deg, transparent 50%, var(--t
 .btn--square { width: 46px; min-height: 46px; padding: 0; }
 .btn--sm { min-height: 34px; padding: 0 10px; font-size: 12.5px; }
 
-.progress { display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--text-2); font-weight: 650; }
-.progress__track { flex: 1; height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
-.progress__bar { height: 100%; width: var(--value, 0%); background: var(--accent); border-radius: inherit; transition: width .3s var(--ease); }
+.progress { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--text-2); font-weight: 650; }
+.progress__text { display: flex; flex-direction: column; gap: 2px; min-height: 38px; }
+.progress__quip { color: var(--text); font-size: 14px; font-weight: 750; letter-spacing: -.01em; }
+.progress__meta { display: flex; justify-content: space-between; gap: 12px; color: var(--text-3); font-size: 12px; }
+.progress__pct { font-variant-numeric: tabular-nums; font-weight: 750; color: var(--text-2); }
+
+/* Calcul en cours : le profil d'altitude se dessine au rythme réel du calcul, un point le
+   gravit et un fanion se lève à chaque col (illustration, pas le vrai profil). */
+.climb { position: relative; height: 84px; border-radius: 16px; background: var(--surface); overflow: hidden; }
+.climb__svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.climb__counters { position: absolute; left: 12px; top: 8px; z-index: 1; display: flex; gap: 14px; font-size: 11px; font-weight: 650; color: var(--text-3); }
+.climb__counters b { font: italic 800 20px var(--display); color: var(--text); font-variant-numeric: tabular-nums; }
+.climb__counters[hidden] { display: none; }
+.climb__ghost { fill: none; stroke: var(--line-2); stroke-width: 1.4; stroke-dasharray: 3 4; }
+.climb__area { fill: var(--accent-soft); }
+.climb__line { fill: none; stroke: var(--ink); stroke-width: 2.2; stroke-linejoin: round; stroke-linecap: round; }
+.climb__dot { fill: var(--accent); stroke: var(--ink); stroke-width: 1.8; }
+.climb__pulse { fill: none; stroke: var(--ink); stroke-width: 1.2; opacity: 0; }
+.climb__flag { opacity: 0; }
+.climb__flag line { stroke: var(--text); stroke-width: 1.2; }
+.climb__flag path { fill: var(--head); }
+.climb__flag text { font: 700 9px var(--font); fill: var(--text-2); }
 
 /* ---------- Prévisions ---------- */
 .forecast { display: flex; flex-direction: column; gap: 12px; padding: 14px; border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--line); }
@@ -750,6 +769,15 @@ details.about[open] > :not(summary) { animation: rise-in .22s var(--ease); }
 /* Changement de thème : fondu enchaîné (View Transitions) */
 ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .25s; }
 
+/* Profil du calcul : le point « respire », les fanions se lèvent avec un petit rebond
+   (moment rare : un col franchi). */
+@keyframes climb-pulse { from { transform: scale(.8); opacity: .8; } to { transform: scale(2.4); opacity: 0; } }
+@keyframes flag-up { 0% { opacity: 0; transform: scale(.6); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+.climb__pulse { transform-box: fill-box; transform-origin: center; animation: climb-pulse 1.4s var(--ease) infinite; }
+.climb__flag { transform-box: fill-box; transform-origin: 0 100%; }
+.climb__flag.is-up { opacity: 1; animation: flag-up .45s var(--ease); }
+.progress__quip.is-quip { animation: rise-in .3s var(--ease); }
+
 /* Mouvement réduit : on garde les fondus utiles, on retire déplacements, rebonds et cascades. */
 @media (prefers-reduced-motion: reduce) {
   :root { --rise: 0px; --press: 1; }
@@ -758,5 +786,7 @@ details.about[open] > :not(summary) { animation: rise-in .22s var(--ease); }
   .count.is-bump, .is-popped svg, .done-toggle.is-popped svg { animation: none; }
   .toast, .toast.is-leaving { transform: none; }
   @starting-style { .toast { transform: none; } }
+  .climb__pulse { display: none; }
+  .climb__flag.is-up { animation: fade-in .2s ease; }
   .leaflet-container *, .leaflet-container *::before, .leaflet-container *::after { transition: none !important; animation: none !important; }
 }

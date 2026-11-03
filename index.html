@@ -110,7 +110,19 @@
 
           <div class="cta">
             <button type="submit" class="btn btn--primary btn--lg" id="submitBtn"><span data-icon="route"></span><span id="submitLabel">Trouver mes boucles</span></button>
-            <div class="progress" id="progress" hidden aria-live="polite"><div class="progress__track"><div class="progress__bar"></div></div><span class="progress__label"></span></div>
+            <div class="progress" id="progress" hidden>
+              <div class="climb" aria-hidden="true">
+                <div class="climb__counters"><span><b class="climb__km">0</b> km</span><span><b class="climb__dplus">0</b> m D+</span></div>
+                <svg class="climb__svg">
+                  <defs><clipPath id="climbReveal"><rect class="climb__mask" x="0" y="0" width="0" height="200"/></clipPath></defs>
+                  <path class="climb__ghost"/>
+                  <g clip-path="url(#climbReveal)"><path class="climb__area"/><path class="climb__line"/></g>
+                  <g class="climb__flags"></g>
+                  <g class="climb__rider"><circle class="climb__pulse" r="5"/><circle class="climb__dot" r="4.6"/></g>
+                </svg>
+              </div>
+              <p class="progress__text"><span class="progress__quip" aria-hidden="true"></span><span class="progress__meta"><span class="progress__label" role="status"></span><span class="progress__pct" aria-hidden="true"></span></span></p>
+            </div>
           </div>
         </form>
 
